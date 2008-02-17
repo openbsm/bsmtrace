@@ -1,0 +1,238 @@
+.\" Copyright (c) 2007 Mak Kolybabi
+.\" All rights reserved
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.Dd April 04, 2007
+.Dt BSMTRACE.CONF 5
+.Os FreeBSD 6.2
+.Sh NAME
+.Nm bsmtrace.conf
+.Nd configuration file for bsmtrace
+.Sh GRAMMAR
+Syntax for
+.Nm
+in BNF:
+.Bd -literal
+/*-
+ * Please note that this grammar is not entirely correct. As it is written, it
+ * would be valid to create a set with the type <rgid> and yet specify
+ * uids. Fixing these issues would have made the grammar far too unwieldly.
+ *
+ * $Id$
+ */
+
+<alphanumeric_sequence> ::=  <alphanumeric> { <alphanumeric_sequence> }
+<alphanumeric> ::= "_" | <letter> | <digit>
+<value> ::= ["-"] <digit> { <digit> }
+<letter> ::= <uppercase_letter> | <lowercase_letter>
+<uppercase_letter> ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" |
+                       "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" |
+                       "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+<lowercase_letter> ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" |
+                       "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" |
+                       "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<set_definition> ::= "define set" <set_name> <set_type> <set> ";"
+<set_name> ::= "$" <alphanumeric_sequence>
+<set_type> ::= "<" ("auid" | "euid" | "ruid" | "egid" | "rgid" | "auditevent" |
+               "auditclass" | "path" | "logchannel") ">"
+<set> ::= "{" (<subject_set> | <event_set> | <object_set> | <log_set>) ";}"
+
+<subject_set> ::= <auid_set> | <euid_set> | <ruid_set> | <egid_set> | <rgid_set>
+<auid_set> ::= <auid> { "," <auid> }
+<euid_set> ::= <euid> { "," <euid> }
+<ruid_set> ::= <ruid> { "," <ruid> }
+<egid_set> ::= <egid> { "," <egid> }
+<rgid_set> ::= <rgid> { "," <rgid> }
+<auid> ::= <user>
+<euid> ::= <user>
+<ruid> ::= <user>
+<egid> ::= <group>
+<rgid> ::= <group>
+<user> ::= <user_name> | <value>
+<group> ::= <group_name> | <value>
+
+<event_set> ::= <auditevent_set> | <auditclass_set>
+<auditevent_set> ::= <auditevent> { "," <auditevent> }
+<auditclass_set> ::= <auditclass> { "," <auditclass> }
+
+<object_set> ::= <path_set>
+<path_set> ::= <path> { "," <path> }
+
+<log_set> ::= "{" <log_channel_name> { "," <log_channel_name>} ";}"
+<log_channel> ::= "log-channel" <log_channel_name> <log_type> <log_option_set> ";"
+<log_type> ::= "bsm" | "syslog" | "stderr"
+<log_option_set> ::= "{" <log_option> { "," <log_option> } ";}"
+<log_option> ::= ( "priority" | "directory" ) <string>
+<log_channel_name> ::= "$" <alphanumeric_sequence>
+
+<sequence> ::= "sequence" <sequence_name> "{"
+               "subject" ["not"] ( <set> | (<set_name> | "any")) ";"
+               ["timeout" <value> <time_scale> ";"]
+	       ["priority" <value> ";"]
+	       ["log" (<set> | <set_name>) ";"]
+	       ["serial" <value> ";"]
+	       ["scope" <scope> ";"]
+               <state> { <state> } "};"
+
+<state> ::= "state {"
+            "event" ["not"] (<event_set> | <set_name>) ";"
+            "status" ["not"] <status> ";"
+            ["object" ["not"] (<object_set> | <object_name> ";")]
+            ["multiplier" <value> ";"]
+            ["trigger" "\"" <string> "\";"]
+            "};"
+
+<status> ::= "success" | "failure" | "any"
+<time_scale> ::= "seconds" | "minutes" | "hours" | "days" | "weeks" | "none"
+<scope> ::= "global" | "process" | "session" | "thread"
+.Sh FILES
+.Pa /etc/bsmtrace.conf
+.Sh SEE ALSO
+.Xr auditd 8 ,
+.Xr bsmtrace 1 ,
+.Xr libbsm 3 ,
+.Xr praudit 1
+.Sh AUTHORS
+.An Aaron L. Meihm Aq alm@freebsd.org
+.An Christian S.J. Peron Aq csjp@freebsd.org
+.\" Copyright (c) 2007 Mak Kolybabi
+.\" All rights reserved
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.Dd April 04, 2007
+.Dt BSMTRACE.CONF 5
+.Os FreeBSD 6.2
+.Sh NAME
+.Nm bsmtrace.conf
+.Nd configuration file for bsmtrace
+.Sh GRAMMAR
+Syntax for
+.Nm
+in BNF:
+.Bd -literal
+/*-
+ * Please note that this grammar is not entirely correct. As it is written, it
+ * would be valid to create a set with the type <rgid> and yet specify
+ * uids. Fixing these issues would have made the grammar far too unwieldly.
+ *
+ * $Id$
+ */
+
+<alphanumeric_sequence> ::=  <alphanumeric> { <alphanumeric_sequence> }
+<alphanumeric> ::= "_" | <letter> | <digit>
+<value> ::= ["-"] <digit> { <digit> }
+<letter> ::= <uppercase_letter> | <lowercase_letter>
+<uppercase_letter> ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" |
+                       "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" |
+                       "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+<lowercase_letter> ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" |
+                       "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" |
+                       "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<set_definition> ::= "define set" <set_name> <set_type> <set> ";"
+<set_name> ::= "$" <alphanumeric_sequence>
+<set_type> ::= "<" ("auid" | "euid" | "ruid" | "egid" | "rgid" | "auditevent" |
+               "auditclass" | "path" | "logchannel") ">"
+<set> ::= "{" (<subject_set> | <event_set> | <object_set> | <log_set>) ";}"
+
+<subject_set> ::= <auid_set> | <euid_set> | <ruid_set> | <egid_set> | <rgid_set>
+<auid_set> ::= <auid> { "," <auid> }
+<euid_set> ::= <euid> { "," <euid> }
+<ruid_set> ::= <ruid> { "," <ruid> }
+<egid_set> ::= <egid> { "," <egid> }
+<rgid_set> ::= <rgid> { "," <rgid> }
+<auid> ::= <user>
+<euid> ::= <user>
+<ruid> ::= <user>
+<egid> ::= <group>
+<rgid> ::= <group>
+<user> ::= <user_name> | <value>
+<group> ::= <group_name> | <value>
+
+<event_set> ::= <auditevent_set> | <auditclass_set>
+<auditevent_set> ::= <auditevent> { "," <auditevent> }
+<auditclass_set> ::= <auditclass> { "," <auditclass> }
+
+<object_set> ::= <path_set>
+<path_set> ::= <path> { "," <path> }
+
+<log_set> ::= "{" <log_channel_name> { "," <log_channel_name>} ";}"
+<log_channel> ::= "log-channel" <log_channel_name> <log_type> <log_option_set> ";"
+<log_type> ::= "bsm" | "syslog" | "stderr"
+<log_option_set> ::= "{" <log_option> { "," <log_option> } ";}"
+<log_option> ::= ( "priority" | "directory" ) <string>
+<log_channel_name> ::= "$" <alphanumeric_sequence>
+
+<sequence> ::= "sequence" <sequence_name> "{"
+               "subject" ["not"] ( <set> | (<set_name> | "any")) ";"
+               ["timeout" <value> <time_scale> ";"]
+	       ["priority" <value> ";"]
+	       ["log" (<set> | <set_name>) ";"]
+	       ["serial" <value> ";"]
+	       ["scope" <scope> ";"]
+               <state> { <state> } "};"
+
+<state> ::= "state {"
+            "event" ["not"] (<event_set> | <set_name>) ";"
+            "status" ["not"] <status> ";"
+            ["object" ["not"] (<object_set> | <object_name> ";")]
+            ["multiplier" <value> ";"]
+            ["trigger" "\"" <string> "\";"]
+            "};"
+
+<status> ::= "success" | "failure" | "any"
+<time_scale> ::= "seconds" | "minutes" | "hours" | "days" | "weeks" | "none"
+<scope> ::= "global" | "process" | "session" | "thread"
+.Sh FILES
+.Pa /etc/bsmtrace.conf
+.Sh SEE ALSO
+.Xr auditd 8 ,
+.Xr bsmtrace 1 ,
+.Xr libbsm 3 ,
+.Xr praudit 1
+.Sh AUTHORS
+.An Aaron L. Meihm Aq alm@freebsd.org
+.An Christian S.J. Peron Aq csjp@freebsd.org

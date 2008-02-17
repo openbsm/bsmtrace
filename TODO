@@ -1,0 +1,8 @@
+TODO for bsmtrace
+
+(1) Add more enhanced logging.
+(2) Add support for triggers during state transition.
+(3) Add the ability to assign priorities to defined sequences.
+(4) Add the notion of "scope". Currently, all events are tied
+    to a specific subject, instead of process or process group.
+(5) Add detection/notification of processes core dumping/segfaulting.

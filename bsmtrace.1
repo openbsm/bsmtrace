@@ -1,0 +1,176 @@
+.\" Copyright (c) 2007 Mak Kolybabi
+.\" All rights reserved
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.Dd April 04, 2007
+.Dt BSMTRACE 1
+.Os FreeBSD 6.2
+.Sh NAME
+.Nm bsmtrace
+.Nd host-based IDS based on OpenBSM
+.Sh SYNOPSIS
+.Nm
+.Op Fl bdFhv
+.Op Fl a Ar trail
+.Op Fl f Ar config_file
+.Op Fl p Ar pid_file
+.Sh DESCRIPTION
+BSMtrace is a utility that processes audit trails, or real-time audit feeds
+provided by audit pipes.  It loads a set of finite state machines or
+sequences from the supplied configuration file and watches the audit
+streams for instances of these sequences.  For more information, the
+example bsmtrace.conf file should be reviewed.
+.Pp
+It operates by reading a configuration file that lists sequences
+which should result in actions. The default configuration file is
+.Pa /etc/bsmtrace.conf .
+BSM records are taken from
+.Pa /dev/auditpipe
+and run through a finite state machine which attempts to match a stream of
+records to defined sequences.
+.Sh OPTIONS
+.Bl -tag -width ".Fl f Pa config_file"
+.It Fl a Pa trail
+Audit trail to be examined.
+.It Fl b
+Dump the last BSM record which results in a sequence match to stdout.
+.It Fl d
+Print debugging messages.
+.It Fl f Pa config_file
+Location of config file.
+.It Fl F
+Run program in foreground.
+.It Fl h
+Print this help message.
+.It Fl p Pa pid_file
+Location of pid file.
+.It Fl v
+Print version and exit.
+.El
+.Sh DIAGNOSTICS
+.Ex -std
+.Sh FILES
+.Bl -tag -width ".Pa /var/run/bsmtrace.pid" -compact
+.It Pa /dev/auditpipe
+Default source for BSM records.
+.It Pa /etc/bsmtrace.conf
+Default configuration file.
+.It Pa /var/run/bsmtrace.pid
+Default pid file.
+.El
+.Sh SEE ALSO
+.Xr auditd 8 ,
+.Xr bsmtrace.conf 5 ,
+.Xr libbsm 3 ,
+.Xr praudit 1
+.Sh AUTHORS
+.An Aaron L. Meihm Aq alm@freebsd.org
+.An Christian S.J. Peron Aq csjp@freebsd.org
+.\" Copyright (c) 2007 Mak Kolybabi
+.\" All rights reserved
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.Dd April 04, 2007
+.Dt BSMTRACE 1
+.Os FreeBSD 6.2
+.Sh NAME
+.Nm bsmtrace
+.Nd host-based IDS based on OpenBSM
+.Sh SYNOPSIS
+.Nm
+.Op Fl bdFhv
+.Op Fl a Ar trail
+.Op Fl f Ar config_file
+.Op Fl p Ar pid_file
+.Sh DESCRIPTION
+BSMtrace is a utility that processes audit trails, or real-time audit feeds
+provided by audit pipes.  It loads a set of finite state machines or
+sequences from the supplied configuration file and watches the audit
+streams for instances of these sequences.  For more information, the
+example bsmtrace.conf file should be reviewed.
+.Pp
+It operates by reading a configuration file that lists sequences
+which should result in actions. The default configuration file is
+.Pa /etc/bsmtrace.conf .
+BSM records are taken from
+.Pa /dev/auditpipe
+and run through a finite state machine which attempts to match a stream of
+records to defined sequences.
+.Sh OPTIONS
+.Bl -tag -width ".Fl f Pa config_file"
+.It Fl a Pa trail
+Audit trail to be examined.
+.It Fl b
+Dump the last BSM record which results in a sequence match to stdout.
+.It Fl d
+Print debugging messages.
+.It Fl f Pa config_file
+Location of config file.
+.It Fl F
+Run program in foreground.
+.It Fl h
+Print this help message.
+.It Fl p Pa pid_file
+Location of pid file.
+.It Fl v
+Print version and exit.
+.El
+.Sh DIAGNOSTICS
+.Ex -std
+.Sh FILES
+.Bl -tag -width ".Pa /var/run/bsmtrace.pid" -compact
+.It Pa /dev/auditpipe
+Default source for BSM records.
+.It Pa /etc/bsmtrace.conf
+Default configuration file.
+.It Pa /var/run/bsmtrace.pid
+Default pid file.
+.El
+.Sh SEE ALSO
+.Xr auditd 8 ,
+.Xr bsmtrace.conf 5 ,
+.Xr libbsm 3 ,
+.Xr praudit 1
+.Sh AUTHORS
+.An Aaron L. Meihm Aq alm@freebsd.org
+.An Christian S.J. Peron Aq csjp@freebsd.org

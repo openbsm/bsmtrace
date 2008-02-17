@@ -1,0 +1,74 @@
+/*-
+ * Please note that this grammar is not entirely correct. As it is written, it
+ * would be valid to create a set with the type <rgid> and yet specify
+ * uids. Fixing these issues would have made the grammar far too unwieldly.
+ *
+ * $Id$
+ */
+
+<alphanumeric_sequence> ::=  <alphanumeric> { <alphanumeric_sequence> }
+<alphanumeric> ::= "_" | <letter> | <digit>
+<value> ::= ["-"] <digit> { <digit> }
+<letter> ::= <uppercase_letter> | <lowercase_letter>
+<uppercase_letter> ::= "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" |
+                       "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" |
+                       "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+<lowercase_letter> ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" |
+                       "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" |
+                       "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<set_definition> ::= "define set" <set_name> <set_type> <set> ";"
+<set_name> ::= "$" <alphanumeric_sequence>
+<set_type> ::= "<" ("auid" | "euid" | "ruid" | "egid" | "rgid" | "auditevent" |
+               "auditclass" | "path" | "logchannel") ">"
+<set> ::= "{" (<subject_set> | <event_set> | <object_set> | <log_set>) ";}"
+
+<subject_set> ::= <auid_set> | <euid_set> | <ruid_set> | <egid_set> | <rgid_set>
+<auid_set> ::= <auid> { "," <auid> }
+<euid_set> ::= <euid> { "," <euid> }
+<ruid_set> ::= <ruid> { "," <ruid> }
+<egid_set> ::= <egid> { "," <egid> }
+<rgid_set> ::= <rgid> { "," <rgid> }
+<auid> ::= <user>
+<euid> ::= <user>
+<ruid> ::= <user>
+<egid> ::= <group>
+<rgid> ::= <group>
+<user> ::= <user_name> | <value>
+<group> ::= <group_name> | <value>
+
+<event_set> ::= <auditevent_set> | <auditclass_set>
+<auditevent_set> ::= <auditevent> { "," <auditevent> }
+<auditclass_set> ::= <auditclass> { "," <auditclass> }
+
+<object_set> ::= <path_set>
+<path_set> ::= <path> { "," <path> }
+
+<log_set> ::= "{" <log_channel_name> { "," <log_channel_name>} ";}"
+<log_channel> ::= "log-channel" <log_channel_name> <log_type> <log_option_set> ";"
+<log_type> ::= "bsm" | "syslog" | "stderr"
+<log_option_set> ::= "{" <log_option> { "," <log_option> } ";}"
+<log_option> ::= ( "priority" | "directory" ) <string>
+<log_channel_name> ::= "$" <alphanumeric_sequence>
+
+<sequence> ::= "sequence" <sequence_name> "{"
+               "subject" ["not"] ( <set> | (<set_name> | "any")) ";"
+               ["timeout" <value> <time_scale> ";"]
+	       ["priority" <value> ";"]
+	       ["log" (<set> | <set_name>) ";"]
+	       ["serial" <value> ";"]
+	       ["scope" <scope> ";"]
+               <state> { <state> } "};"
+
+<state> ::= "state {"
+            "event" ["not"] (<event_set> | <set_name>) ";"
+            "status" ["not"] <status> ";"
+            ["object" ["not"] (<object_set> | <object_name> ";")]
+            ["multiplier" <value> ";"]
+            ["trigger" "\"" <string> "\";"]
+            "};"
+
+<status> ::= "success" | "failure" | "any"
+<time_scale> ::= "seconds" | "minutes" | "hours" | "days" | "weeks" | "none"
+<scope> ::= "global" | "process" | "session" | "thread"

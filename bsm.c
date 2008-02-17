@@ -1,0 +1,586 @@
+/*-
+ * Copyright (c) 2007 Aaron L. Meihm
+ * Copyright (c) 2007 Christian S.J. Peron
+ * All rights reserved.
+ *
+ * $Id$
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+#include "includes.h"
+
+b_head_t s_parent, s_dynamic;
+
+static int
+bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
+{
+	struct au_event_ent *aue;
+	int i, match, evdata;
+	struct array *a;
+
+	switch (bm->bm_event_type) {
+	case SET_TYPE_AUCLASS:
+		/*
+		 * XXXCSJP: Could this get quite expensive under high loads if
+		 * not cached?
+		 */
+		aue = getauevnum(bd->br_event);
+		if (aue == NULL) {
+			bsmtrace_error(0, "invalid event type: %d",
+			    bd->br_event);
+			return (0);
+		}
+		evdata = aue->ae_class;
+		break;
+	case SET_TYPE_AUEVENT:
+		evdata = bd->br_event;
+		break;
+	default:
+		assert(0);
+	}
+	assert(bm->bm_event_type == SET_TYPE_AUCLASS ||
+	    bm->bm_event_type == SET_TYPE_AUEVENT);
+	a = &bm->bm_auditevent;
+	match = 0;
+	for (i = 0; i < a->a_cnt; i++) {
+		switch (bm->bm_event_type) {
+		case SET_TYPE_AUCLASS:
+			if ((evdata & a->a_data.value[i]) != 0)
+				match = 1;
+			break;
+		case SET_TYPE_AUEVENT:
+		if (a->a_data.value[i] == evdata)
+			match = 1;
+		}
+	}
+	if (a->a_negated != 0)
+		match = !match;
+	if (!match)
+		return (0);
+	switch (bm->bm_status) {
+	case EVENT_SUCCESS_OR_FAILURE:
+		match = 1;
+		break;
+	case EVENT_SUCCESS:
+		match = (bd->br_status == 0);
+		break;
+	case EVENT_FAILURE:
+		match = (bd->br_status != 0);
+		break;
+	default:
+		assert(0);
+	}
+	return (match);
+}
+
+static int
+bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
+{
+	int i, slen, match;
+	struct array *ap;
+#ifdef PCRE
+	int rc;
+#endif
+
+	/*
+	 * XXXCSJP 
+	 *
+	 * It is possible for various file events to NOT audit the pathname 
+	 * because they are operating on file descriptors.  As a direct result
+	 * our event specification could have specified a generic file event
+	 * class like "fr" and "fw" which includes events like ftruncate(2)
+	 * which does not audit the pathname:
+	 *
+	 * header,108,10,ftruncate(2),0,Sat Apr 14 19:15:11 2007, + 966 msec
+	 * argument,1,0x3,fd
+	 * attribute,644,test,test,80,8078349,32267048
+	 * subject,test,test,test,test,test,4810,4805,56278,207.161.19.21
+	 * return,success,0
+	 * trailer,108
+	 *
+	 * The question becomes, since we can not prove that there was a write
+	 * on the object we are interested in, but a write on some anonymous
+	 * object has occured, should we still raise an alert?
+	 */
+	if (bd->br_path == NULL)
+		return (0);
+	/*
+	 * Check to see if the user has supplied any objects. If not, then this
+	 * is a member match.
+	 */
+	ap = &bm->bm_objects;
+	if (ap->a_cnt == 0)
+		return (1);
+	/*
+	 * Otherwise, the record contains a pathname which may be represented as
+	 * a static string, or as a pcre.
+	 */
+	if (ap->a_type == STRING_ARRAY) {
+		for (match = 0, i = 0; i < ap->a_cnt; i++) {
+			slen = strlen(ap->a_data.string[i]);
+			if (strncmp(ap->a_data.string[i], bd->br_path, slen)
+			    == 0) {
+				match = 1;
+				break;
+			}
+		}
+#ifdef PCRE
+	} else if (ap->a_type == PCRE_ARRAY) {
+		slen = strlen(bd->br_path);
+		for (match = 0, i = 0; i < ap->a_cnt; i++) {
+			rc = pcre_exec(ap->a_data.pcre[i], NULL, bd->br_path,
+			    slen, 0, 0, NULL, 0);
+			if (rc == 0) {
+				match = 1;
+				break;
+			} else if (rc < -1) {
+				bsmtrace_error(0, "pcre exec failed for pattern"
+				    " %s on path %s", ap->a_data.pcre[i],
+				    bd->br_path);
+			}
+		}
+#endif
+	} else
+		/* No other type makes sense. */
+		assert(0);
+	/* Handle negation. */
+	if (ap->a_negated != 0)
+		match = !match;
+	return (match);
+}
+
+static void
+bsm_log_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
+{
+	struct logchannel *lc;
+
+	/*
+	 * If the user specified the -b flag, dump the last BSM record which
+	 * resulted in the sequence match to stdout.
+	 */
+	if (opts.bflag != 0)
+		(void) write(1, bd->br_raw, bd->br_raw_len);
+	/*
+	 * For now, if there is no log channel specified which this particular
+	 * sequence, use stderr. This really needs to be fixed to look at what
+	 * if anything is specified in the global logging options.
+	 */
+	if (TAILQ_EMPTY(&bs->bs_log_channel)) {
+		log_bsm_stderr(NULL, bs, bd);
+		return;
+	}
+	TAILQ_FOREACH(lc, &bs->bs_log_channel, log_glue)
+		(*lc->log_handler)(lc, bs, bd);
+}
+
+static int
+bsm_state_match(struct bsm_sequence *bs, struct bsm_record_data *bd)
+{
+	struct bsm_state *bm;
+	int match;
+
+	assert((bs->bs_seq_flags & BSM_SEQUENCE_DYNAMIC) != 0);
+	bm = bs->bs_cur_state;
+	/*
+	 * Do we have a subject match? At this point we EXPLICITLY do not handle
+	 * negation as it should have been handled by the parent.
+	 */
+	match = (bs->bs_subj.bs_dyn_subj == bsm_get_subj(bs, bd));
+	if (match == 0)
+		return (0);
+	/* Match event. */
+	match = bsm_match_event(bm, bd);
+	if (match == 0)
+		return (0);
+	/* Match object. */
+	match = bsm_match_object(bm, bd);
+	return (match);
+}
+
+static int
+bsm_check_subj_array(u_int subj, struct array *ap)
+{
+	int match, i;
+
+	for (match = 0, i = 0; i < ap->a_cnt; i++)
+		if (ap->a_data.value[i] == subj)
+			match = 1;
+	if (ap->a_negated != 0)
+		match = !match;
+	return (match);
+}
+
+int
+bsm_get_subj(struct bsm_sequence *bs, struct bsm_record_data *bd)
+{
+	u_int subj;
+
+	switch (bs->bs_subj_type) {
+	case SET_TYPE_AUID:
+		subj = bd->br_auid;
+		break;
+	case SET_TYPE_RUID:
+		subj = bd->br_ruid;
+		break;
+	case SET_TYPE_EUID:
+		subj = bd->br_euid;
+		break;
+	case SET_TYPE_RGID:
+		subj = bd->br_rgid;
+		break;
+	case SET_TYPE_EGID:
+		subj = bd->br_egid;
+		break;
+	default:
+		bsmtrace_error(0, "invalid subject type %d", bs->bs_subj_type);
+		assert(0);
+	}
+	return (subj);
+}
+
+static int
+bsm_check_parent_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
+{
+	struct bsm_state *bm;
+	u_int subj, match;
+
+	assert((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0);
+	subj = bsm_get_subj(bs, bd);
+	match = bsm_check_subj_array(subj, &bs->bs_subj.bs_par_subj);
+	if (match == 0 && (bs->bs_seq_flags & BSM_SEQUENCE_SUBJ_ANY) == 0)
+		return (0);
+	assert(bs->bs_cur_state == NULL && !TAILQ_EMPTY(&bs->bs_mhead));
+	bm = TAILQ_FIRST(&bs->bs_mhead);
+	/* Match event. */
+	match = bsm_match_event(bm, bd);
+	if (match == 0)
+		return (0);
+	/* Match object. */
+	match = bsm_match_object(bm, bd);
+	return (match);
+}
+
+static struct bsm_sequence *
+bsm_dyn_sequence_find(struct bsm_sequence *bs, struct bsm_record_data *bd,
+    u_int subj)
+{
+	struct bsm_sequence *bs_dyn;
+
+	assert((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0);
+	TAILQ_FOREACH(bs_dyn, &s_dynamic, bs_glue)
+		if (bs_dyn->bs_par_sequence == bs &&
+		    bs_dyn->bs_subj_type == bs->bs_subj_type &&
+		    bs_dyn->bs_subj.bs_dyn_subj == subj)
+			return (bs_dyn);
+	return (NULL);
+}
+
+static void
+bsm_free_raw_data(struct bsm_sequence *bs)
+{
+	struct bsm_state *bm;
+
+	TAILQ_FOREACH(bm, &bs->bs_mhead, bm_glue) {
+		if (bm->bm_raw != NULL)
+			free(bm->bm_raw);
+		bm->bm_raw_len = 0;
+	}
+}
+
+static void
+bsm_copy_states(struct bsm_sequence *bs_old, struct bsm_sequence *bs_new)
+{
+	struct bsm_state *bm, *bm2;
+
+	/*
+	 * Make sure that we initialize the new tailq head to NULL
+	 * otherwise we would be recursively adding states.
+	 */
+	dprintf("%s: copying states from sequence %p\n", __func__, bs_old);
+	TAILQ_INIT(&bs_new->bs_mhead);
+	TAILQ_FOREACH(bm, &bs_old->bs_mhead, bm_glue) {
+		bm2 = calloc(1, sizeof(*bm2));
+		if (bm2 == NULL) {
+			bsmtrace_error(0, "%s: calloc failed",
+			    __func__);
+			exit(1);
+		}
+		*bm2 = *bm;
+		TAILQ_INSERT_TAIL(&bs_new->bs_mhead, bm2, bm_glue);
+	}
+}
+
+static caddr_t
+bsm_copy_record_data(struct bsm_record_data *bd)
+{
+	caddr_t record;
+
+	record = malloc(bd->br_raw_len);
+	if (record == NULL)
+		bsmtrace_error(1, "malloc failed");
+	bcopy(bd->br_raw, record, bd->br_raw_len);
+	return (record);
+}
+
+static void
+bsm_free_sequence(struct bsm_sequence *bs)
+{
+	struct bsm_state *bm;
+
+	dprintf("%s: freeing sequence %p\n", __func__, bs);
+	assert((bs->bs_seq_flags & BSM_SEQUENCE_DYNAMIC) != 0);
+	bsm_free_raw_data(bs);
+	while (!TAILQ_EMPTY(&bs->bs_mhead)) {
+		bm = TAILQ_FIRST(&bs->bs_mhead);
+		TAILQ_REMOVE(&bs->bs_mhead, bm, bm_glue);
+		free(bm);
+	}
+	free(bs);
+#ifdef INVARIANTS
+	bs = 0xdeadc0de;
+#endif
+}
+
+static struct bsm_sequence *
+bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
+    struct bsm_record_data *bd)
+{
+	struct bsm_sequence *bs_new;
+	struct bsm_state *bm;
+
+	bs_new = bsm_dyn_sequence_find(bs, bd, subj);
+	if (bs_new != NULL) {
+		if ((bs_new->bs_seq_flags & BSM_SEQUENCE_DESTROY) != 0) {
+			TAILQ_REMOVE(&s_dynamic, bs_new, bs_glue);
+			bsm_free_sequence(bs_new);
+		}
+		return (NULL);
+	}
+	bs_new = calloc(1, sizeof(*bs_new));
+	if (bs_new == NULL) {
+		bsmtrace_error(0, "%s: calloc failed", __func__);
+		return (NULL);
+	}
+	dprintf("%u:%s: sequence %p cloned and linked\n",
+	    time(NULL), bs->bs_label, bs_new);
+	*bs_new = *bs;
+	/*
+	 * The BSM sequence flags are mutually exclusive.
+	 */
+	bs_new->bs_seq_flags &= ~BSM_SEQUENCE_PARENT;
+	bs_new->bs_seq_flags |= BSM_SEQUENCE_DYNAMIC;
+	bs_new->bs_subj.bs_dyn_subj = subj;
+	bs_new->bs_par_sequence = bs;
+	bs_new->bs_first_match = bd->br_sec;
+	bs_new->bs_mtime = bd->br_sec;
+	bsm_copy_states(bs, bs_new);
+	/*
+	 * If we have made it this far, we can assume that we have more than
+	 * one finite state defined.
+	 */
+	assert(TAILQ_FIRST(&bs->bs_mhead) != TAILQ_LAST(&bs->bs_mhead, tailq));
+	bm = TAILQ_FIRST(&bs_new->bs_mhead);
+	bm->bm_raw = bsm_copy_record_data(bd);
+	bm->bm_raw_len = bd->br_raw_len;
+	bs_new->bs_cur_state = TAILQ_NEXT(bm, bm_glue);
+	return (bs_new);
+}
+
+static void
+bsm_sequence_scan(struct bsm_record_data *bd)
+{
+	struct bsm_sequence *bs, *bs_dyn, *bs_temp;
+	struct bsm_state *bm;
+	u_int match, subj;
+
+	/* Match dynamic sequences. */
+	TAILQ_FOREACH_SAFE(bs, &s_dynamic, bs_glue, bs_temp) {
+		assert((bs->bs_seq_flags & BSM_SEQUENCE_DYNAMIC) != 0);
+		/*
+		 * Make sure that every sequence here has multiple states.
+		 */
+		assert(TAILQ_LAST(&bs->bs_mhead, tailq) !=
+		    TAILQ_FIRST(&bs->bs_mhead));
+		/*
+		 * If the sequence was marked for destruction and it didn't
+		 * match any parent sequences, destroy it here. The only
+		 * reason we do not destroy is we do not want the parent
+		 * matching on it.
+		 */
+		if ((bs->bs_seq_flags & BSM_SEQUENCE_DESTROY) != 0) {
+			TAILQ_REMOVE(&s_dynamic, bs, bs_glue);
+			bsm_free_sequence(bs);
+			continue;
+		}
+		if (bs->bs_timeout > 0 &&
+		    (bd->br_sec - bs->bs_mtime) > bs->bs_timeout) {
+			TAILQ_REMOVE(&s_dynamic, bs, bs_glue);
+			bsm_free_sequence(bs);
+			continue;
+		}
+		match = bsm_state_match(bs, bd);
+		if (match == 0)
+			continue;
+		bm = bs->bs_cur_state;
+		bsm_run_trigger(bd, bm);
+		if (opts.bflag)
+			(void) write(1, bd->br_raw, bd->br_raw_len);
+		bm->bm_raw = bsm_copy_record_data(bd);
+		bm->bm_raw_len = bd->br_raw_len;
+		/* Final state (complete sequence) has been matched. */
+		if (bm == TAILQ_LAST(&bs->bs_mhead, tailq)) {
+			assert((bs->bs_seq_flags & BSM_SEQUENCE_DESTROY) == 0);
+			bsm_log_sequence(bs, bd);
+			bs->bs_seq_flags |= BSM_SEQUENCE_DESTROY;
+			continue;
+		}
+		dprintf("%s: state transition cur=%p\n", bs->bs_label,
+		    TAILQ_NEXT(bm, bm_glue));
+		bs->bs_cur_state = TAILQ_NEXT(bm, bm_glue);
+	}
+	/* Match parent sequences. */
+	TAILQ_FOREACH(bs, &s_parent, bs_glue) {
+		assert((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0);
+		match = bsm_check_parent_sequence(bs, bd);
+		if (match == 0)
+			continue;
+		bsm_run_trigger(bd, TAILQ_FIRST(&bs->bs_mhead));
+		if (opts.bflag)
+			(void) write(1, bd->br_raw, bd->br_raw_len);
+		/*
+		 * It's possible that the parent sequence has only one state
+		 * defined, in which case, raise an alert and don't bother
+		 * creating a dynamic object for it.
+		 */
+		if (TAILQ_FIRST(&bs->bs_mhead) ==
+		    TAILQ_LAST(&bs->bs_mhead, tailq)) {
+			bsm_log_sequence(bs, bd);
+			continue;
+		}
+		dprintf("%d:%s: state transition\n", time(NULL), bs->bs_label);
+		subj = bsm_get_subj(bs, bd);
+		bs_dyn = bsm_sequence_clone(bs, subj, bd);
+		if (bs_dyn == NULL)
+			continue;
+		TAILQ_INSERT_HEAD(&s_dynamic, bs_dyn, bs_glue);
+	}
+}
+
+void
+bsm_loop(char *atrail)
+{
+	struct bsm_record_data bd;
+	int reclen, bytesread;
+	u_char *bsm_rec;
+	tokenstr_t tok;
+	FILE *fp;
+
+	if (strcmp(opts.aflag, "-") == 0)
+		fp = stdin;
+	else
+		fp = fopen(opts.aflag, "r");
+	if (fp == NULL)
+		bsmtrace_error(1, "%s: %s", opts.aflag, strerror(errno));
+	/*
+	 * Process the BSM record, one token at a time.
+	 */
+	while ((reclen = au_read_rec(fp, &bsm_rec)) != -1) {
+		bzero(&bd, sizeof(bd));
+		bd.br_raw = bsm_rec;
+		bd.br_raw_len = reclen;
+		bytesread = 0;
+		/*
+		 * Iterate through each BSM token, extracting the bits that are
+		 * required to starting processing sequences.
+		 */
+		while (bytesread < reclen) {
+			if (au_fetch_tok(&tok, bsm_rec + bytesread,
+			    reclen - bytesread) < 0) {
+				bsmtrace_error(0, "incomplete record");
+				break;
+			}
+			switch (tok.id) {
+			case AUT_HEADER32:
+				bd.br_event = tok.tt.hdr32.e_type;
+				bd.br_sec = tok.tt.hdr32.s;
+				bd.br_usec = tok.tt.hdr32.ms;
+				break;
+			case AUT_HEADER32_EX:
+				bd.br_event = tok.tt.hdr32_ex.e_type;
+				bd.br_sec = tok.tt.hdr32_ex.s;
+				bd.br_usec = tok.tt.hdr32_ex.ms;
+				break;
+			case AUT_HEADER64:
+				bd.br_event = tok.tt.hdr64.e_type;
+				bd.br_sec = tok.tt.hdr64.s;
+				bd.br_usec = tok.tt.hdr64.ms;
+				break;
+			case AUT_HEADER64_EX:
+				bd.br_event = tok.tt.hdr32_ex.e_type;
+				bd.br_sec = tok.tt.hdr64_ex.s;
+				bd.br_usec = tok.tt.hdr64_ex.ms;
+				break;
+			case AUT_SUBJECT32:
+				bd.br_auid = tok.tt.subj32.auid;
+				bd.br_euid = tok.tt.subj32.euid;
+				bd.br_egid = tok.tt.subj32.egid;
+				bd.br_ruid = tok.tt.subj32.ruid;
+				bd.br_rgid = tok.tt.subj32.rgid;
+				bd.br_pid = tok.tt.subj32.pid;
+				bd.br_sid = tok.tt.subj32.sid;
+				break;
+			case AUT_SUBJECT64:
+				bd.br_auid = tok.tt.subj64.auid;
+				bd.br_euid = tok.tt.subj64.euid;
+				bd.br_egid = tok.tt.subj64.egid;
+				bd.br_ruid = tok.tt.subj64.ruid;
+				bd.br_rgid = tok.tt.subj64.rgid;
+				bd.br_pid = tok.tt.subj64.pid;
+				bd.br_sid = tok.tt.subj64.sid;
+				break;
+			case AUT_SUBJECT32_EX:
+				bd.br_auid = tok.tt.subj32_ex.auid;
+				bd.br_euid = tok.tt.subj32_ex.euid;
+				bd.br_egid = tok.tt.subj32_ex.egid;
+				bd.br_ruid = tok.tt.subj32_ex.ruid;
+				bd.br_rgid = tok.tt.subj32_ex.rgid;
+				bd.br_pid = tok.tt.subj32.pid;
+				bd.br_sid = tok.tt.subj32.sid;
+				break;
+			case AUT_RETURN32:
+				bd.br_status = (u_int64_t)tok.tt.ret32.status;
+				break;
+			case AUT_RETURN64:
+				bd.br_status = tok.tt.ret64.err;
+				break;
+			case AUT_PATH:
+				bd.br_path = tok.tt.path.path;
+				break;
+			}
+			bytesread += tok.len;
+		}
+		bsm_sequence_scan(&bd);
+		free(bsm_rec);
+	}
+	fclose(fp);
+}

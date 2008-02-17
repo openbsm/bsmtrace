@@ -1,0 +1,7 @@
+- Fixed bug which resulted in "status" being ignored for single state sequences
+- Added support for logging channels.
+- Added support for state triggers.
+- Fixed bug where alerts were being produced for state machines that have been
+  expired. (Alerts have already been generated).
+- Fixed two memory leaks which could really impact systems with high volumes
+  audit records.
