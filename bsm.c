@@ -122,8 +122,7 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	 * on the object we are interested in, but a write on some anonymous
 	 * object has occured, should we still raise an alert?
 	 */
-	if (bd->br_path == NULL)
-		return (0);
+
 	/*
 	 * Check to see if the user has supplied any objects. If not, then this
 	 * is a member match.
@@ -131,6 +130,12 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	ap = &bm->bm_objects;
 	if (ap->a_cnt == 0)
 		return (1);
+	/*
+	 * We are interested in particular objects, but the audit record has
+	 * not supplied any.  We will treat this as a fail to match.
+	 */
+	if (bd->br_path == NULL)
+		return (0);
 	/*
 	 * Otherwise, the record contains a pathname which may be represented as
 	 * a static string, or as a pcre.
@@ -185,7 +190,7 @@ bsm_log_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
 	 * sequence, use stderr. This really needs to be fixed to look at what
 	 * if anything is specified in the global logging options.
 	 */
-	if (TAILQ_EMPTY(&bs->bs_log_channel)) {
+	if (TAILQ_EMPTY(&bs->bs_log_channel) && opts.Fflag != 0) {
 		log_bsm_stderr(NULL, bs, bd);
 		return;
 	}
@@ -361,12 +366,38 @@ bsm_free_sequence(struct bsm_sequence *bs)
 #endif
 }
 
+/*
+ * Implement a function which produces random values with an interesting
+ * property.  This function will produce a random value, where the probability
+ * of this value being between 0 and size is specified by prob.
+ *
+ * Let v be > 0 and < 1 (random value)
+ * Let P (probability) be > 0 and < 1
+ *
+ * Rv = v * (range / P); 
+ *
+ */
+static float
+bsm_rand_bias(float size, float prob)
+{
+	unsigned int val;
+	float r;
+
+	val = arc4random();
+	r = (float)val;
+	while (r > 1)
+		r = r / 10;
+	return (r * (size / prob));
+}
+
 static struct bsm_sequence *
 bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
     struct bsm_record_data *bd)
 {
 	struct bsm_sequence *bs_new;
 	struct bsm_state *bm;
+	float size, prob;
+	int rnd;
 
 	bs_new = bsm_dyn_sequence_find(bs, bd, subj);
 	if (bs_new != NULL) {
@@ -403,6 +434,18 @@ bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
 	bm->bm_raw = bsm_copy_record_data(bd);
 	bm->bm_raw_len = bd->br_raw_len;
 	bs_new->bs_cur_state = TAILQ_NEXT(bm, bm_glue);
+	/*
+	 * Handle the randomization of the timeout window here.
+	 */
+	if (bs_new->bs_seq_time_wnd != 0) {
+		size = bs_new->bs_seq_time_wnd;
+		if (bs_new->bs_seq_time_wnd_prob > 0)
+			prob = (float)bs_new->bs_seq_time_wnd_prob / 100;
+		else
+			prob = (float)(65 / 100);
+		rnd = bsm_rand_bias(size, prob);
+		bs_new->bs_timeout = bs_new->bs_timeout + rnd;
+	}
 	return (bs_new);
 }
 
@@ -490,7 +533,7 @@ void
 bsm_loop(char *atrail)
 {
 	struct bsm_record_data bd;
-	int reclen, bytesread;
+	int reclen, bytesread, recsread;
 	u_char *bsm_rec;
 	tokenstr_t tok;
 	FILE *fp;
@@ -501,10 +544,22 @@ bsm_loop(char *atrail)
 		fp = fopen(opts.aflag, "r");
 	if (fp == NULL)
 		bsmtrace_error(1, "%s: %s", opts.aflag, strerror(errno));
+	if (strcmp(opts.aflag, DEFAULT_AUDIT_TRAIL) == 0)
+		audit_pipe_fd = fileno(fp);
+	dprintf("opened '%s' for audit monitoring\n", opts.aflag);
 	/*
 	 * Process the BSM record, one token at a time.
 	 */
+	recsread = 0;
 	while ((reclen = au_read_rec(fp, &bsm_rec)) != -1) {
+		/*
+		 * If we are reading data from the audit pipe, we need check
+		 * how many records, if any have been dropped by the kernel.
+		 * If any record loss has been identified, pipe_analyze_loss()
+		 * should increase the internal audit pipe queue length.
+		 */
+		if (audit_pipe_fd > 0 && (recsread % 50) == 0)
+			pipe_analyze_loss(audit_pipe_fd);
 		bzero(&bd, sizeof(bd));
 		bd.br_raw = bsm_rec;
 		bd.br_raw_len = reclen;
@@ -581,6 +636,7 @@ bsm_loop(char *atrail)
 		}
 		bsm_sequence_scan(&bd);
 		free(bsm_rec);
+		recsread++;
 	}
-	fclose(fp);
+	(void) fclose(fp);
 }

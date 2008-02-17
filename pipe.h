@@ -27,49 +27,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include <sys/types.h>
-#ifndef __APPLE__
-#include <sys/queue.h>
-#endif
-#include <sys/stat.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/msg.h>
-#include <sys/uio.h>
-#include <sys/un.h>
+#ifndef PIPE_DOT_H_
+#define PIPE_DOT_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <pwd.h>
-#include <grp.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <time.h>
-#include <assert.h>
-#include <syslog.h>
+struct pipe_stats {
+	unsigned int		ap_reads;
+	unsigned int		ap_drops;
+	unsigned int		ap_truncates;
+};
 
-#include <bsm/libbsm.h>
-#include <bsm/audit.h>
-#ifndef __APPLE__
-#include <security/audit/audit_ioctl.h>
-#endif
-#ifdef PCRE
-#include <pcre.h>
-#endif
-
-#ifdef __APPLE__
-#include "queue.h"
-#endif
-#include "config.h"
-#include "deuce.h"
-#include "bsmtrace.h"
-#include "conf.h"
-#include "bsm.h"
-#include "log.h"
-#include "pipe.h"
-#include "trigger.h"
+void	pipe_analyze_loss(int);
+void	pipe_get_stats(int, struct pipe_stats *);
+void	pipe_report_stats(int);
+#endif	/* PIPE_DOT_H_ */

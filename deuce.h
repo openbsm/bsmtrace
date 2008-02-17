@@ -131,6 +131,8 @@ struct bsm_sequence {
 	int				 bs_seq_scope;
 	pid_t				 bs_seq_scope_data;
 	int				 bs_seq_serial;
+	int				 bs_seq_time_wnd;
+	int				 bs_seq_time_wnd_prob;
 };
 
 struct bsm_record_data {

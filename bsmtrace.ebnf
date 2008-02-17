@@ -55,6 +55,8 @@
 <sequence> ::= "sequence" <sequence_name> "{"
                "subject" ["not"] ( <set> | (<set_name> | "any")) ";"
                ["timeout" <value> <time_scale> ";"]
+               ["timeout-window" <value> <time_scale> ";"]
+               ["timeout-probability" <value> ";"]
 	       ["priority" <value> ";"]
 	       ["log" (<set> | <set_name>) ";"]
 	       ["serial" <value> ";"]

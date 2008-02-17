@@ -104,18 +104,18 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 	struct bsm_state *bm;
 
 	(void) snprintf(dir, MAXPATHLEN,
-	    "%s/%s", lc->log_data.bsm_log_dir,
-	    bs->bs_label);
+	    "%s/%s", lc->log_data.bsm_log_dir, bs->bs_label);
 	error = stat(dir, &sb);
 	if (error < 0 && errno == ENOENT) {
 		if (mkdir(dir, S_IRWXU) < 0)
 			bsmtrace_error(1, "mkdir failed");
 	} else if (error < 0)
 		bsmtrace_error(1, "stat failed");
-	(void) sprintf(path, "%s/%d.%d", dir, br->br_sec, br->br_usec);
+	(void) sprintf(path, "%s/%d.%d.%lu",
+	    dir, br->br_sec, br->br_usec, random());
 	fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd < 0)
-		bsmtrace_error(1, "open failed");
+		bsmtrace_error(1, "open: %s: %s", path, strerror(errno));
 	/*
 	 * The logic here becomes a bit complex.  We need to check to see if
 	 * this is a single state sequence, and if it is, log the BSM record
@@ -126,13 +126,13 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 	if ((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0) {
 		if (write(fd, br->br_raw, br->br_raw_len) < 0)
 			bsmtrace_error(1, "write failed");
-		close(fd);
+		(void) close(fd);
 		return (0);
 	}
 	TAILQ_FOREACH(bm, &bs->bs_mhead, bm_glue)
 		if (write(fd, bm->bm_raw, bm->bm_raw_len) < 0)
 			bsmtrace_error(1, "write failed");
-	close(fd);
+	(void) close(fd);
 	return (0);
 }
 

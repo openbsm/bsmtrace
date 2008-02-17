@@ -48,7 +48,7 @@ bsmtrace_write_pidfile(char *pidfile)
 	(void) sprintf(pidbuf, "%d", getpid());
 	if (write(fd, pidbuf, strlen(pidbuf)) < 0)
 		bsmtrace_error(1, "write pid file faled");
-	close(fd);
+	(void) close(fd);
 }
 
 /*
@@ -68,7 +68,7 @@ bsmtrace_error(int flag, char *fmt, ...)
 	else
 		pri = LOG_WARNING;
 	va_start(ap, fmt);
-	vsnprintf(fmtbuf, sizeof(fmtbuf), fmt, ap);
+	(void) vsnprintf(fmtbuf, sizeof(fmtbuf), fmt, ap);
 	va_end(ap);
 	syslog(pri, "%s: %s", flag != 0 ? "fatal" : "warning", fmtbuf);
 	/* if we are not yet a daemon, we also write the error message
@@ -87,6 +87,7 @@ bsmtrace_error(int flag, char *fmt, ...)
 void
 bsmtrace_exit(int x)
 {
+
 	exit(x);
 }
 
@@ -99,10 +100,22 @@ dprintf(char *fmt, ...)
 	if (!opts.dflag)
 		return;
 	va_start(ap, fmt);
-	memset(buf, 0, sizeof(buf));
-	vsnprintf(buf, sizeof(buf) - 1, fmt, ap);
+	(void) memset(buf, 0, sizeof(buf));
+	(void) vsnprintf(buf, sizeof(buf) - 1, fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "debug: %s", buf);
+	(void) fprintf(stderr, "debug: %s", buf);
+	(void) fflush(stderr);
+}
+
+void
+bsmtrace_handle_sigint(int sig)
+{
+
+	if (audit_pipe_fd != 0) {
+		(void) fputs("\n", stderr);
+		pipe_report_stats(audit_pipe_fd);
+	}
+	bsmtrace_exit(1);
 }
 
 void
@@ -115,13 +128,30 @@ set_default_settings(struct g_conf *gc)
 	openlog("bsmtrace", LOG_NDELAY | LOG_PID, LOG_AUTH | LOG_ALERT);
 }
 
+static void
+bsmtrace_seed(void)
+{
+	unsigned long seed;
+	int fd;
+
+	fd = open("/dev/random", O_RDONLY);
+	if (fd < 0)
+		bsmtrace_error(1, "open random device failed");
+	if (read(fd, &seed, sizeof(seed)) != sizeof(seed))
+		bsmtrace_error(1, "read random device failed");
+	srandom(seed);
+	(void) close(fd);
+}
+
 int
 main(int argc, char *argv[])
 {
 	int ret, fd;
 	char ch;
 
-	signal(SIGCHLD, SIG_IGN); /* Ignore dying children */
+	bsmtrace_seed();
+	(void) signal(SIGCHLD, SIG_IGN); /* Ignore dying children */
+	(void) signal(SIGINT, bsmtrace_handle_sigint);
 	set_default_settings(&opts);
 	while ((ch = getopt(argc, argv, "Fa:bdf:hp:v")) != -1) {
 		switch (ch) {
@@ -172,7 +202,9 @@ main(int argc, char *argv[])
 		(void) dup2(fd, STDERR_FILENO);
 		if (fd > 2)
 			(void) close(fd);
-		setsid();
+		if (setsid() < 0)
+			bsmtrace_error(1, "setsid failed: %s",
+			    strerror(errno));
 		bsmtrace_write_pidfile(opts.pflag);
 		daemonized = 1;
 	}

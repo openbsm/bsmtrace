@@ -28,7 +28,7 @@
 #ifndef BSM_TRACE_H_
 #define	BSM_TRACE_H_
 
-#define BSMTRACE_VERSION "BSMTRACE 1.0.0-BETA"
+#define BSMTRACE_VERSION "BSMTRACE 1.2.0-HEAD"
 struct g_conf {
 	char	*aflag;
 	int	 bflag;
@@ -39,6 +39,7 @@ struct g_conf {
 };
 
 struct g_conf opts;
+int	audit_pipe_fd;	/* XXX not happy about this global */
 
 void	bsmtrace_error(int, char *, ...);
 void	bsmtrace_exit(int);

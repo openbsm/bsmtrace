@@ -3,16 +3,16 @@
 CC	= gcc
 CFLAGS 	= -Wall -g
 TARGETS = bsmtrace
-OBJ	= bsm.o bsmtrace.o conf.o y.tab.o lex.yy.o log.o trigger.o
+OBJ	= bsm.o bsmtrace.o conf.o y.tab.o lex.yy.o log.o pipe.o trigger.o
 PREFIX	= /usr/local
 LIBS	= -lbsm
 
-.ifdef PCRE
-CFLAGS	+= -I /usr/local/include
-CFLAGS	+= -L /usr/local/lib
-CFLAGS	+= -D PCRE
-LIBS	+= -lpcre
-.endif
+#.ifdef PCRE
+#CFLAGS	+= -I /usr/local/include
+#CFLAGS	+= -L /usr/local/lib
+#CFLAGS	+= -D PCRE
+#LIBS	+= -lpcre
+#.endif
 
 all: $(TARGETS)
 

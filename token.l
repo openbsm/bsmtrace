@@ -64,6 +64,8 @@ status		return (STATUS);
 subject		return (SUBJECT);
 success		return (SUCCESS);
 timeout		return (TIMEOUT);
+timeout-window	return (TIMEOUTWND);
+timeout-prob	return (TIMEOUTPROB);
 trigger		return (TRIGGER);
 weeks		return (WEEKS);
 {integer}	{

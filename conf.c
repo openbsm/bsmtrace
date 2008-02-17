@@ -97,7 +97,7 @@ conf_load(char *path)
 	yyin = f;
 	TAILQ_INIT(&bsm_set_head);
 	yyparse();
-	fclose(f);
+	(void) fclose(f);
 }
 
 /*

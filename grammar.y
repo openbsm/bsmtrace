@@ -51,9 +51,10 @@ static struct logchannel	*log_state;
 %token	STATUS MULTIPLIER OBRACE EBRACE SEMICOLON COMMA SUBJECT
 %token	STRING ANY SUCCESS FAILURE INTEGER TIMEOUT NOT HOURS MINUTES DAYS
 %token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN
-%token	DIRECTORY LOG SCOPE SERIAL
+%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB
 %type	<num> status_spec SUCCESS FAILURE INTEGER multiplier_spec timeout_spec
-%type	<num> serial_spec negate_spec priority_spec scope_spec
+%type	<num> serial_spec negate_spec priority_spec scope_spec timeout_wnd_spec
+%type	<num> timeout_prob_spec time_spec
 %type	<str> STRING
 %type	<array> set_list set_list_ent
 %type	<bsm_set> anon_set
@@ -207,30 +208,51 @@ subject_spec:
 	}
 	;
 
-timeout_spec:
-	TIMEOUT INTEGER SECONDS SEMICOLON
+timeout_prob_spec:
+	TIMEOUTPROB INTEGER SEMICOLON
 	{
 		$$ = $2;
 	}
-	| TIMEOUT INTEGER HOURS SEMICOLON
+	;
+
+timeout_wnd_spec:
+	TIMEOUTWND time_spec SEMICOLON
 	{
-		$$ = $2 * 3600;
+		$$ = $2;
 	}
-	| TIMEOUT INTEGER MINUTES SEMICOLON
+	;
+
+time_spec:
+	INTEGER SECONDS
 	{
-		$$ = $2 * 60;
+		$$ = $1;
 	}
-	| TIMEOUT INTEGER DAYS SEMICOLON
+	| INTEGER HOURS
 	{
-		$$ = $2 * 3600 * 24;
+		$$ = $1 * 3600;
 	}
-	| TIMEOUT INTEGER WEEKS SEMICOLON
+	| INTEGER MINUTES
 	{
-		$$ = $2 * 3600 * 24 * 7;
+		$$ = $1 * 60;
 	}
-	| TIMEOUT NONE SEMICOLON
+	| INTEGER DAYS
+	{
+		$$ = $1 * 3600 * 24;
+	}
+	| INTEGER WEEKS
+	{
+		$$ = $1 * 3600 * 24 * 7;
+	}
+	| NONE
 	{
 		$$ = 0;
+	}
+	;
+
+timeout_spec:
+	TIMEOUT time_spec SEMICOLON
+	{
+		$$ = $2;
 	}
 	;
 
@@ -337,7 +359,18 @@ sequence_options: /* Empty */
 	}
 	| sequence_options serial_spec
 	{
+		assert(bs_state != NULL);
 		bs_state->bs_seq_serial = $2;
+	}
+	| sequence_options timeout_wnd_spec
+	{
+		assert(bs_state != NULL);
+		bs_state->bs_seq_time_wnd = $2;
+	}
+	| sequence_options timeout_prob_spec
+	{
+		assert(bs_state != NULL);
+		bs_state->bs_seq_time_wnd_prob = $2;
 	}
 	;
 

@@ -72,15 +72,15 @@ bsm_expand_trigger(struct bsm_record_data *bd, struct bsm_state *bm)
 			switch (expptr->val) {
 			case EXP_USER:
 				if ((pw = getpwuid(bd->br_auid)) == NULL)
-					strlcpy(token, "non-attributable",
+					(void) strlcpy(token, "non-attributable",
 					    sizeof(token));
 				else
-					strlcpy(token, pw->pw_name,
+					(void) strlcpy(token, pw->pw_name,
 					    sizeof(token));
 				break;
 			case EXP_OBJECT:
 				if (bd->br_path != NULL)
-					strlcpy(token, bd->br_path,
+					(void) strlcpy(token, bd->br_path,
 					    sizeof(token));
 				else {
 					free(ret);
@@ -90,7 +90,7 @@ bsm_expand_trigger(struct bsm_record_data *bd, struct bsm_state *bm)
 			default:
 				assert(0);
 			}
-			strlcat(ret, token, allocated);
+			(void) strlcat(ret, token, allocated);
 			p1 = ret + strlen(ret);
 		} else
 			*(p1++) = *(p0++);
