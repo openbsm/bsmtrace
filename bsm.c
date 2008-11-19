@@ -130,6 +130,11 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	ap = &bm->bm_objects;
 	if (ap->a_cnt == 0)
 		return (1);
+	/*
+	 * For BSM records which reference a file but do not contain a path
+	 * (i.e. fstat(2), fchmod(2) et al), scan the pathname cache for it's
+	 * device and see if we can pullup the pathname.
+	 */
 	if (bd->br_dev != 0 && bd->br_inode != 0 && bd->br_path == NULL)
 		bd->br_path = fcache_search(bd->br_dev, bd->br_inode);
 	/*
