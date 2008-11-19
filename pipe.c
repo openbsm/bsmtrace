@@ -32,7 +32,6 @@
 #ifdef AUDITPIPE_GET_DROPS
 
 static int	ap_cur_drop_cnt;
-static int	ap_cur_trunc_cnt;
 
 void
 pipe_analyze_loss(int pipefd)
@@ -41,16 +40,6 @@ pipe_analyze_loss(int pipefd)
 	unsigned int cur_qlim, max_qlim;
 
 	pipe_get_stats(pipefd, &aps);
-	/*
-	 * We dont currently handle truncated records, but we should at
-	 * least be logging the fact that it happens.
-	 */
-	if (aps.ap_truncates > ap_cur_trunc_cnt) {
-		bsmtrace_error(0, "audit pipe truncated %d records"
-		    " (%d) since last interval", aps.ap_truncates,
-		    aps.ap_truncates - ap_cur_trunc_cnt);
-		ap_cur_trunc_cnt = aps.ap_truncates;
-	}
 	/*
 	 * If there has been no change in the drop count since the last time
 	 * we collected the statistics, return because there is nothing to
@@ -95,9 +84,6 @@ pipe_get_stats(int pipefd, struct pipe_stats *aps)
 	if (ioctl(pipefd, AUDITPIPE_GET_DROPS, &aps->ap_drops) < 0)
 		bsmtrace_error(1, "AUDITPIPE_GET_DROPS: %s",
 		    strerror(errno));
-	if (ioctl(pipefd, AUDITPIPE_GET_TRUNCATES, &aps->ap_truncates) < 0)
-		bsmtrace_error(1, "AUDITPIPE_GET_TRUNCATES: %s",
-		    strerror(errno));
 }
 
 void
@@ -110,13 +96,12 @@ pipe_report_stats(int pipefd)
 	/* XXX should be calling bsmtrace_error(0, ...) here? */
 	if (opts.Fflag)
 		(void) fprintf(stderr,
-		    "audit record drops %u\n"
-		    "audit record reads %u\n"
-		    "audit record truncates %u\n",
-		    aps.ap_drops, aps.ap_reads, aps.ap_truncates);
+		    "audit record drops %ju\n"
+		    "audit record reads %ju\n",
+		    aps.ap_drops, aps.ap_reads);
 	else
 		syslog(LOG_AUTH | LOG_INFO,
-		    "audit record drops=%u reads=%u truncates=%u",
-		    aps.ap_drops, aps.ap_reads, aps.ap_truncates);
+		    "audit record drops=%ju reads=%ju",
+		    aps.ap_drops, aps.ap_reads);
 }
 #endif	/* AUDITPIPE_GET_DROPS */

@@ -31,9 +31,8 @@
 #define PIPE_DOT_H_
 
 struct pipe_stats {
-	unsigned int		ap_reads;
-	unsigned int		ap_drops;
-	unsigned int		ap_truncates;
+	u_int64_t		ap_reads;
+	u_int64_t		ap_drops;
 };
 
 void	pipe_analyze_loss(int);
