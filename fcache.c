@@ -82,6 +82,7 @@ fcache_locate(dev_t device)
 	dp = malloc(sizeof(*dp));
 	if (dp == NULL)
 		return (NULL);
+	dp->d_device = device;
 	RB_INIT(&dp->d_btree);
 	TAILQ_INSERT_HEAD(&cache_head, dp, d_glue);
 	return (dp);
@@ -104,14 +105,15 @@ fcache_search(dev_t device, ino_t inode)
 }
 
 void
-fache_add_entry(dev_t device, ino_t inode, char *pathname)
+fcache_add_entry(dev_t device, ino_t inode, char *pathname)
 {
 	struct dev_list *dp;
 	struct fcache *fcp;
+	char *ret;
 
-	/*
-	 * NB: We need an eviction strategy here.
-	 */
+	ret = fcache_search(device, inode);
+	if (ret != NULL)
+		return;
 	dp = fcache_locate(device);
 	if (dp == NULL) {
 		(void) fprintf(stderr, "failed to allocate cache\n");
@@ -124,6 +126,7 @@ fache_add_entry(dev_t device, ino_t inode, char *pathname)
 	}
 	fcp->f_inode = inode;
 	fcp->f_pathname = strdup(pathname);
-	(void) RB_INSERT(btree, &dp->d_btree, fcp);
+	if (RB_INSERT(btree, &dp->d_btree, fcp) != 0)
+		printf("item already existed\n");
 }
 

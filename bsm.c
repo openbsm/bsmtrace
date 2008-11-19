@@ -130,6 +130,8 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	ap = &bm->bm_objects;
 	if (ap->a_cnt == 0)
 		return (1);
+	if (bd->br_dev != 0 && bd->br_inode != 0 && bd->br_path == NULL)
+		bd->br_path = fcache_search(bd->br_dev, bd->br_inode);
 	/*
 	 * We are interested in particular objects, but the audit record has
 	 * not supplied any.  We will treat this as a fail to match.
@@ -628,12 +630,19 @@ bsm_loop(char *atrail)
 			case AUT_RETURN64:
 				bd.br_status = tok.tt.ret64.err;
 				break;
+			case AUT_ATTR:
+			case AUT_ATTR32:
+				bd.br_dev = tok.tt.attr32.fsid;
+				bd.br_inode = tok.tt.attr32.nid;
+				break;
 			case AUT_PATH:
 				bd.br_path = tok.tt.path.path;
 				break;
 			}
 			bytesread += tok.len;
 		}
+		if (bd.br_path != NULL && bd.br_dev != 0 && bd.br_inode != 0)
+			fcache_add_entry(bd.br_dev, bd.br_inode, bd.br_path);
 		bsm_sequence_scan(&bd);
 		free(bsm_rec);
 		recsread++;

@@ -150,6 +150,8 @@ struct bsm_record_data {
 	int		 br_raw_len;	/* Raw record length */
 	int		 br_pid;	/* Process ID */
 	int		 br_sid;	/* Session ID */
+	dev_t		 br_dev;	/* For fs objects, the device id. */
+	ino_t		 br_inode;	/* For fs objects, the inode. */
 };
 
 #endif	/* DEUCE_H_ */

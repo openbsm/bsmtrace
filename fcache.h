@@ -45,6 +45,6 @@ struct dev_list {
 void		 fcache_destroy(void);
 void		 fcache_init(void);
 char		*fcache_search(dev_t, ino_t);
-void		 fache_add_entry(dev_t, ino_t, char *);
+void		 fcache_add_entry(dev_t, ino_t, char *);
 
 #endif	/* FCACHE_DOT_H_ */
