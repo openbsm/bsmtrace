@@ -48,6 +48,24 @@ fcache_cmp(struct fcache *fc1, struct fcache *fc2)
 }
 
 void
+fcache_destroy(void)
+{
+	struct fcache *fcp, *next_fcp;
+	struct dev_list *dp, *dp2;
+
+	TAILQ_FOREACH_SAFE(dp, &cache_head, d_glue, dp2) {
+		for (fcp = RB_MIN(btree, &dp->d_btree); fcp != NULL;
+		    fcp = next_fcp) {
+			next_fcp = RB_NEXT(btree, &dp->d_btree, fcp);
+			RB_REMOVE(btree, &dp->d_btree, fcp);
+			free(fcp);
+		}
+		TAILQ_REMOVE(&cache_head, dp, d_glue);
+		free(dp);
+	}
+}
+
+void
 fcache_init(void)
 {
 
