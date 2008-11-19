@@ -3,7 +3,7 @@
 CC	= gcc
 CFLAGS 	= -Wall -g
 TARGETS = bsmtrace
-OBJ	= bsm.o bsmtrace.o conf.o y.tab.o lex.yy.o log.o pipe.o trigger.o
+OBJ	= bsm.o bsmtrace.o conf.o y.tab.o lex.yy.o log.o pipe.o trigger.o fcache.o
 PREFIX	= /usr/local
 LIBS	= -lbsm
 
