@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #ifndef __APPLE__
 #include <sys/queue.h>
+#include <sys/tree.h>
 #endif
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -67,6 +68,7 @@
 #endif
 #include "config.h"
 #include "deuce.h"
+#include "fcache.h"
 #include "bsmtrace.h"
 #include "conf.h"
 #include "bsm.h"

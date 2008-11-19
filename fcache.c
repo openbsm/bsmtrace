@@ -28,7 +28,6 @@
  * SUCH DAMAGE.
  */
 #include "includes.h"
-#include "fcache.h"
 
 static int      fcache_cmp(struct fcache *, struct fcache *);
 
@@ -72,7 +71,7 @@ fcache_init(void)
 	TAILQ_INIT(&cache_head);
 }
 
-struct dev_list *
+static struct dev_list *
 fcache_locate(dev_t device)
 {
 	struct dev_list *dp;
@@ -104,12 +103,15 @@ fcache_search(dev_t device, ino_t inode)
 	return (fcp->f_pathname);
 }
 
-static void
+void
 fache_add_entry(dev_t device, ino_t inode, char *pathname)
 {
 	struct dev_list *dp;
 	struct fcache *fcp;
 
+	/*
+	 * NB: We need an eviction strategy here.
+	 */
 	dp = fcache_locate(device);
 	if (dp == NULL) {
 		(void) fprintf(stderr, "failed to allocate cache\n");
