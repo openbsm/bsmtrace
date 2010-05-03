@@ -123,6 +123,9 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 	 * are dealing with a dynamic sequence, and the records are attached to
 	 * each individual state.
 	 */
+	syslog(LOG_AUTH | LOG_NOTICE,
+	    "%u.%u sequence match evidence file: %s", br->br_sec, br->br_usec,
+	    path);
 	if ((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0) {
 		if (write(fd, br->br_raw, br->br_raw_len) < 0)
 			bsmtrace_error(1, "write failed");
