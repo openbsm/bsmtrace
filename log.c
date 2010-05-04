@@ -124,7 +124,9 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 	 * each individual state.
 	 */
 	syslog(LOG_AUTH | LOG_NOTICE,
-	    "%u.%u sequence match evidence file: %s", br->br_sec, br->br_usec,
+	    "%u.%u sequence %s match evidence file: %s",
+	    br->br_sec, br->br_usec,
+	    bs->bs_label,
 	    path);
 	if ((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0) {
 		if (write(fd, br->br_raw, br->br_raw_len) < 0)
