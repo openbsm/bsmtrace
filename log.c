@@ -50,19 +50,29 @@ static const struct _logchannel_type {
 char *
 parse_bsm_generic(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
-	char message[128];
+	char 	 message[128 + NAME_MAX];
+	char	*basename;
 	u_int subj;
+
+	if (strcmp(opts.aflag, "-") == 0)
+		basename = "stdin";
+	else {
+		basename = strrchr(opts.aflag, '/');
+		basename = (basename == NULL) ? opts.aflag : basename + 1;
+	}
 
 	if ((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0) {
 		subj = bsm_get_subj(bs, br);
 		bs->bs_first_match = br->br_sec;
 	} else
 		subj = bs->bs_subj.bs_dyn_subj;
+
 	(void) snprintf(message, sizeof(message),
 	    "%d.%d state machine: %s subject: auid %d "
-	    "completed: duration %d seconds priority: %d\n",
+	    "completed: duration %d seconds priority: %d "
+	    "source: %s\n",
 	    br->br_sec, br->br_usec, bs->bs_label,
-	    subj, br->br_sec - bs->bs_first_match, bs->bs_priority);
+	    subj, br->br_sec - bs->bs_first_match, bs->bs_priority, basename);
 	return (strdup(message));
 }
 
@@ -102,7 +112,14 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 	struct stat sb;
 	int fd, error;
 	struct bsm_state *bm;
+	char *src_basename;
 
+	if (strcmp(opts.aflag, "-") == 0)
+		src_basename = "stdin";
+	else {
+		src_basename = strrchr(opts.aflag, '/');
+		src_basename = (src_basename == NULL) ? opts.aflag : src_basename + 1;
+	}
 	(void) snprintf(dir, MAXPATHLEN,
 	    "%s/%s", lc->log_data.bsm_log_dir, bs->bs_label);
 	error = stat(dir, &sb);
@@ -124,10 +141,11 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 	 * each individual state.
 	 */
 	syslog(LOG_AUTH | LOG_NOTICE,
-	    "%u.%u sequence %s match evidence file: %s",
+	    "%u.%u sequence %s match evidence file: %s source: %s",
 	    br->br_sec, br->br_usec,
 	    bs->bs_label,
-	    path);
+	    path,
+	    src_basename);
 	if ((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0) {
 		if (write(fd, br->br_raw, br->br_raw_len) < 0)
 			bsmtrace_error(1, "write failed");
