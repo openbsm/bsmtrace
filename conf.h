@@ -30,8 +30,6 @@
 #ifndef BSM_CONF_H_
 #define	BSM_CONF_H_
 
-#define	BSM_ARRAY_MAX		64
-
 extern bsm_set_head_t	bsm_set_head;
 extern int 		lineno;
 
