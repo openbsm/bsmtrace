@@ -64,6 +64,11 @@ struct array {
 #define PCRE_ARRAY	4
 #endif
 	int		a_cnt;
+	/*
+	 * NB: Perhaps in the future, these arrays will auto
+	 * scale based on the demand.  But for now, just make
+	 * them static.
+	 */
 	union {
 		int	 value[BSM_ARRAY_MAX];
 		char	*string[BSM_ARRAY_MAX];
