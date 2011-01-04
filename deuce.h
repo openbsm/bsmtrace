@@ -28,7 +28,7 @@
 #ifndef DEUCE_H_
 #define	DEUCE_H_
 
-#define	BSM_ARRAY_MAX	256
+#define	BSM_ARRAY_MAX	1024
 
 typedef TAILQ_HEAD(, bsm_sequence) b_head_t;
 
