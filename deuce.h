@@ -105,7 +105,7 @@ struct bsm_state {
 	int		 bm_status;
 	int		 bm_multiplier;
 	int		 bm_event_type;
-	char		 bm_trig[1024];
+	char		 bm_trig[8192];
 	TAILQ_ENTRY(bsm_state)	bm_glue;
 	caddr_t		 bm_raw;
 	int		 bm_raw_len;

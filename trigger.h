@@ -35,7 +35,8 @@
 enum {
 	EXP_NONE,
 	EXP_USER,
-	EXP_OBJECT
+	EXP_OBJECT,
+	EXP_EUSER
 };
 
 void	 bsm_run_trigger(struct bsm_record_data *, struct bsm_state *);

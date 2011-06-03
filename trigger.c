@@ -35,6 +35,7 @@ static const struct _exptab {
 } exptab[] = {
 	{ "subject",	EXP_USER },
 	{ "object",	EXP_OBJECT },
+	{ "esubject",	EXP_EUSER },
 	{ NULL,		0 }
 };
 
@@ -72,6 +73,14 @@ bsm_expand_trigger(struct bsm_record_data *bd, struct bsm_state *bm)
 			switch (expptr->val) {
 			case EXP_USER:
 				if ((pw = getpwuid(bd->br_auid)) == NULL)
+					(void) strlcpy(token, "non-attributable",
+					    sizeof(token));
+				else
+					(void) strlcpy(token, pw->pw_name,
+					    sizeof(token));
+				break;
+			case EXP_EUSER:
+				if ((pw = getpwuid(bd->br_euid)) == NULL)
 					(void) strlcpy(token, "non-attributable",
 					    sizeof(token));
 				else
