@@ -106,7 +106,7 @@ struct bsm_state {
 	int		 bm_multiplier;
 	int		 bm_event_type;
 #define	BSM_STATE_EVENT_ANY		 0x00000001U
-	u_int	 bm_event_flags;
+	u_int		 bm_event_flags;
 	char		 bm_trig[8192];
 	TAILQ_ENTRY(bsm_state)	bm_glue;
 	caddr_t		 bm_raw;
