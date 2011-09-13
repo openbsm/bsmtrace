@@ -73,6 +73,8 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 			match = 1;
 		}
 	}
+	if ((bm->bm_event_flags & BSM_STATE_EVENT_ANY) != 0)
+		match = 1;
 	if (a->a_negated != 0)
 		match = !match;
 	if (!match)

@@ -408,6 +408,12 @@ type_spec:
 		bzero(&array_state, sizeof(struct array));
 		dst->a_negated = $2;
 	}
+	| EVENT ANY SEMICOLON
+	{
+		bm_state->bm_event_type = SET_TYPE_AUEVENT;
+		bm_state->bm_event_flags |= BSM_STATE_EVENT_ANY;
+		bzero(&array_state, sizeof(struct array));
+	}
 	;
 
 object_spec:
