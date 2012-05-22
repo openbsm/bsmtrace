@@ -3,7 +3,7 @@
 CC	= gcc
 CFLAGS 	= -Wall -g
 TARGETS = bsmtrace
-OBJ	= bsm.o bsmtrace.o conf.o y.tab.o lex.yy.o log.o pipe.o trigger.o fcache.o
+OBJ	= y.tab.o bsm.o bsmtrace.o conf.o lex.yy.o log.o pipe.o trigger.o fcache.o
 PREFIX	= /usr/local
 LIBS	= -lbsm
 
@@ -22,6 +22,8 @@ all: $(TARGETS)
 y.tab.o: grammar.y
 	yacc -vd grammar.y
 	$(CC) $(CFLAGS) -c y.tab.c
+
+y.tab.h: y.tab.o
 
 lex.yy.o: y.tab.h token.l
 	lex token.l
