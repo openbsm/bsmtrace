@@ -135,7 +135,7 @@ bsm_run_trigger(struct bsm_record_data *bd, struct bsm_state *bm)
 			if (args == NULL)
 				bsmtrace_error(1, "%s: calloc failed",
 				    __func__);
-			dprintf("executing trigger: '%s'\n", cmd);
+			debug_printf("executing trigger: '%s'\n", cmd);
 			while ((ptr = strsep(&cmd, " ")) != NULL) {
 				if (*ptr == '\0')
 					continue;

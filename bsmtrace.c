@@ -92,7 +92,7 @@ bsmtrace_exit(int x)
 }
 
 void
-dprintf(char *fmt, ...)
+debug_printf(char *fmt, ...)
 {
 	char buf[1024];
 	va_list ap;

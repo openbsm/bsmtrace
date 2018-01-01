@@ -43,6 +43,6 @@ int	audit_pipe_fd;	/* XXX not happy about this global */
 
 void	bsmtrace_error(int, char *, ...);
 void	bsmtrace_exit(int);
-void	dprintf(char *, ...);
+void	debug_printf(char *, ...);
 void	usage(char *);
 #endif	/* BSM_TRACE_H_ */
