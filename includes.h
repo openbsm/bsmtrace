@@ -65,6 +65,7 @@
 
 #ifdef __APPLE__
 #include "queue.h"
+#include "tree.h"
 #endif
 #include "config.h"
 #include "deuce.h"

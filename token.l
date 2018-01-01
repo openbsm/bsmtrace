@@ -30,7 +30,10 @@
 #include "y.tab.h"
 
 #define YY_NO_UNPUT
+
 %}
+
+%option nounput
 
 tokenchar	[^[:blank:];,<>"\n]
 tokenstring	{tokenchar}+

@@ -27,6 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <sys/types.h>
+
+#include <bsm/audit.h>
+#include <security/audit/audit_ioctl.h>
+
 #include "includes.h"
 
 #ifdef AUDITPIPE_GET_DROPS
@@ -96,12 +101,12 @@ pipe_report_stats(int pipefd)
 	/* XXX should be calling bsmtrace_error(0, ...) here? */
 	if (opts.Fflag)
 		(void) fprintf(stderr,
-		    "audit record drops %ju\n"
-		    "audit record reads %ju\n",
+		    "audit record drops %lld\n"
+		    "audit record reads %lld\n",
 		    aps.ap_drops, aps.ap_reads);
 	else
 		syslog(LOG_AUTH | LOG_INFO,
-		    "audit record drops=%ju reads=%ju",
+		    "audit record drops=%lld reads=%lld",
 		    aps.ap_drops, aps.ap_reads);
 }
 #endif	/* AUDITPIPE_GET_DROPS */
