@@ -136,6 +136,7 @@ conf_array_add(const char *str, struct array *a, int type)
 	pcre *re;
 #endif
 
+	value = -1;
 	e = 0;
 	switch (type) {
 	case SET_TYPE_AUCLASS:
@@ -208,6 +209,9 @@ conf_array_add(const char *str, struct array *a, int type)
 		a->a_type = PCRE_ARRAY;
 #endif
 	} else {
+		if (value == -1) {
+			bsmtrace_error(1, "%s: un-initialized 'value'\n");
+		}
 		a->a_data.value[a->a_cnt++] = value;
 		a->a_type = INTEGER_ARRAY;
 	}
@@ -267,6 +271,7 @@ conf_handle_multiplier(struct bsm_sequence *bs, struct bsm_state *bm)
 		bsmtrace_error(1, "%s: calloc failed", __func__);
 	for (i = 0; i < bm->bm_multiplier; i++) {
 		dst = &vec[i];
+		assert(dst != NULL);
 		*dst = *bm;
 		TAILQ_INSERT_TAIL(&bs->bs_mhead, dst, bm_glue);
 	}
@@ -284,22 +289,6 @@ yywrap()
 {
 
 	return (1);
-}
-
-void
-conf_set_log_channel(struct bsm_set *bss, struct bsm_sequence *bs)
-{
-	struct array *a;
-	int i;
-	struct logchannel *lc;
-
-	a = &bss->bss_data;
-	for (i = 0; i < a->a_cnt; i++) {
-		lc = log_lookup_channel(a->a_data.string[i]);
-		if (lc == NULL)
-			conf_detail(0, "unable to lookup channel");
-		TAILQ_INSERT_HEAD(&bs->bs_log_channel, lc, log_glue);
-	}
 }
 
 int

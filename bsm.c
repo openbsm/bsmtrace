@@ -186,25 +186,25 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 static void
 bsm_log_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
 {
-	struct logchannel *lc;
-
+	/*
+	 * If no logging configuration was specified and we are running
+	 * in the foreground, than simply log to stderr.
+	 */
+	if (opts.Fflag != 0 && opts.lflag == NULL) {
+		log_bsm_stderr(bs, bd);
+		return;
+	}
+	if (opts.lflag == NULL)
+		return;
+	(void) log_bsm_txt_file(bs, bd);
+	if (opts.Bflag != 0)
+		(void) log_bsm_file(bs, bd);
 	/*
 	 * If the user specified the -b flag, dump the last BSM record which
 	 * resulted in the sequence match to stdout.
 	 */
 	if (opts.bflag != 0)
 		(void) write(1, bd->br_raw, bd->br_raw_len);
-	/*
-	 * For now, if there is no log channel specified which this particular
-	 * sequence, use stderr. This really needs to be fixed to look at what
-	 * if anything is specified in the global logging options.
-	 */
-	if (TAILQ_EMPTY(&bs->bs_log_channel) && opts.Fflag != 0) {
-		log_bsm_stderr(NULL, bs, bd);
-		return;
-	}
-	TAILQ_FOREACH(lc, &bs->bs_log_channel, log_glue)
-		(*lc->log_handler)(lc, bs, bd);
 }
 
 static int
@@ -349,6 +349,7 @@ bsm_copy_record_data(struct bsm_record_data *bd)
 {
 	caddr_t record;
 
+	assert(bd != NULL);
 	record = malloc(bd->br_raw_len);
 	if (record == NULL)
 		bsmtrace_error(1, "malloc failed");
@@ -361,6 +362,7 @@ bsm_free_sequence(struct bsm_sequence *bs)
 {
 	struct bsm_state *bm;
 
+	assert(bs != NULL);
 	debug_printf("%s: freeing sequence %p\n", __func__, bs);
 	assert((bs->bs_seq_flags & BSM_SEQUENCE_DYNAMIC) != 0);
 	bsm_free_raw_data(bs);
@@ -440,6 +442,7 @@ bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
 	 */
 	assert(TAILQ_FIRST(&bs->bs_mhead) != TAILQ_LAST(&bs->bs_mhead, tailq));
 	bm = TAILQ_FIRST(&bs_new->bs_mhead);
+	assert(bm != NULL);
 	bm->bm_raw = bsm_copy_record_data(bd);
 	bm->bm_raw_len = bd->br_raw_len;
 	bs_new->bs_cur_state = TAILQ_NEXT(bm, bm_glue);

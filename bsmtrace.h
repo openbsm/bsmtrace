@@ -30,19 +30,22 @@
 
 #define BSMTRACE_VERSION "BSMTRACE 2.0-HEAD"
 struct g_conf {
+	int	 Bflag;
 	char	*aflag;
 	int	 bflag;
 	int	 dflag;
 	char	*fflag;
 	int	 Fflag;
 	char	*pflag;
+	char	*lflag;
+	int	 logfd;
 };
 
 struct g_conf opts;
 int	audit_pipe_fd;	/* XXX not happy about this global */
 
 void	bsmtrace_error(int, char *, ...);
-void	bsmtrace_exit(int);
+void	bsmtrace_exit(int) __attribute__ ((noreturn));
 void	debug_printf(char *, ...);
 void	usage(char *);
 #endif	/* BSM_TRACE_H_ */

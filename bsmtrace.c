@@ -153,8 +153,11 @@ main(int argc, char *argv[])
 	(void) signal(SIGCHLD, SIG_IGN); /* Ignore dying children */
 	(void) signal(SIGINT, bsmtrace_handle_sigint);
 	set_default_settings(&opts);
-	while ((ch = getopt(argc, argv, "Fa:bdf:hp:v")) != -1) {
+	while ((ch = getopt(argc, argv, "Fa:Bbdf:hil:p:v")) != -1) {
 		switch (ch) {
+		case 'B':
+			opts.Bflag = 1;
+			break;
 		case 'F':
 			opts.Fflag = 1;
 			break;
@@ -170,6 +173,9 @@ main(int argc, char *argv[])
 		case 'f':
 			opts.fflag = optarg;
 			break;
+		case 'l':
+			opts.lflag = optarg;
+			break;
 		case 'p':
 			opts.pflag = optarg;
 			break;
@@ -182,6 +188,7 @@ main(int argc, char *argv[])
 			/* NOTREACHED */
 		}
 	}
+	log_init_dir();
 	conf_load(opts.fflag);
 	if (!opts.Fflag) {
 		ret = fork();
@@ -220,11 +227,13 @@ usage(char *progname)
 	    "usage: %s [-Fbdhv] [-a trail] [-f config_file] [-p pid_file]\n\n"
 	    "  -a trail          Audit trail to be examined.\n"
 	    "  -b                Dump the last BSM record which results in a\n"
+	    "  -B                Log BSM records associated with the alert\n"
 	    "                    sequence match to stdout.\n"
 	    "  -d                Print debugging messages.\n"
 	    "  -f config_file    Location of config file.\n"
 	    "  -F                Run program in foreground.\n"
 	    "  -h                Print this help message.\n"
+	    "  -l                Logging directory\n"
 	    "  -p pid_file       Location of pid file.\n"
 	    "  -v                Print version and exit.\n"
 	    , progname);

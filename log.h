@@ -30,34 +30,10 @@
 #ifndef LOG_H_
 #define LOG_H_
 
-TAILQ_HEAD(, logchannel) log_head;
-
-enum {
-	LOG_CHANNEL_NOP,
-	LOG_CHANNEL_SYSLOG,
-	LOG_CHANNEL_BSM,
-	LOG_CHANNEL_STDERR
-};
-
-struct logchannel {
-	int	 log_type;
-	char	*log_name;
-	union {
-		int	 syslog_pri;
-		char	*bsm_log_dir;
-	} log_data;
-	TAILQ_ENTRY(logchannel) log_glue;
-	void (*log_handler)(struct logchannel *, struct bsm_sequence *,
-	    struct bsm_record_data *);
-};
-
-int	 log_chan_type(char *);
-int	 log_syslog_encode(char *);
-struct logchannel
-	*log_lookup_channel(char *);
-int	 log_bsm_stderr(struct logchannel *, struct bsm_sequence *,
-	     struct bsm_record_data *);
+int	 log_bsm_stderr(struct bsm_sequence *, struct bsm_record_data *);
 void 	*log_chan_handler(char *);
-int	 log_bsm_file(struct logchannel *, struct bsm_sequence *,
-	     struct bsm_record_data *);
+int	 log_bsm_file(struct bsm_sequence *, struct bsm_record_data *);
+void	 log_init_dir(void);
+int	 log_bsm_txt_file(struct bsm_sequence *, struct bsm_record_data *);
+
 #endif /* LOG_H_ */
