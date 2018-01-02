@@ -101,12 +101,12 @@ pipe_report_stats(int pipefd)
 	/* XXX should be calling bsmtrace_error(0, ...) here? */
 	if (opts.Fflag)
 		(void) fprintf(stderr,
-		    "audit record drops %lld\n"
-		    "audit record reads %lld\n",
+		    "audit record drops %" PRIu64 "\n"
+		    "audit record reads %" PRIu64 "\n",
 		    aps.ap_drops, aps.ap_reads);
 	else
 		syslog(LOG_AUTH | LOG_INFO,
-		    "audit record drops=%lld reads=%lld",
+		    "audit record drops=%" PRIu64 " reads=%" PRIu64 "",
 		    aps.ap_drops, aps.ap_reads);
 }
 #endif	/* AUDITPIPE_GET_DROPS */
