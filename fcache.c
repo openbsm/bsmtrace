@@ -126,7 +126,9 @@ fcache_add_entry(dev_t device, ino_t inode, char *pathname)
 	}
 	fcp->f_inode = inode;
 	fcp->f_pathname = strdup(pathname);
-	if (RB_INSERT(btree, &dp->d_btree, fcp) != 0)
+	if (RB_INSERT(btree, &dp->d_btree, fcp) != 0) {
+		free(fcp);
 		printf("item already existed\n");
+	}
 }
 

@@ -36,7 +36,6 @@ static struct bsm_sequence	*bs_state;	/* BSM sequence state */
 static struct bsm_set		*set_state;	/* BSM set state */
 static struct bsm_state	*bm_state;	/* BSM state */
 static struct array		 array_state;	/* Volatile array */
-static struct logchannel	*log_state;
 %}
 
 %union {
@@ -51,7 +50,7 @@ static struct logchannel	*log_state;
 %token	STATUS MULTIPLIER OBRACE EBRACE SEMICOLON COMMA SUBJECT
 %token	STRING ANY SUCCESS FAILURE INTEGER TIMEOUT NOT HOURS MINUTES DAYS
 %token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN
-%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB
+%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG
 %type	<num> status_spec SUCCESS FAILURE INTEGER multiplier_spec timeout_spec
 %type	<num> serial_spec negate_spec priority_spec scope_spec timeout_wnd_spec
 %type	<num> timeout_prob_spec time_spec
@@ -68,7 +67,6 @@ root	: /* empty */
 
 cmd	:
 	define_def
-	| log_channel
 	| sequence_def
 	;
 
@@ -94,62 +92,6 @@ define_def:
 		TAILQ_INSERT_TAIL(&bsm_set_head, set_state, bss_glue);
 		set_state = NULL;
 	}
-	;
-
-log_channel:
-	LOGCHAN STRING OPBRACKET STRING EPBRACKET
-	{
-		assert(log_state == NULL);
-		log_state = calloc(1, sizeof(*log_state));
-		if (log_state == NULL)
-			bsmtrace_error(1, "%s: calloc failed", __func__);
-		log_state->log_type = log_chan_type($4);
-		if (log_state->log_type < 0)
-			conf_detail(0, "%s: invalid log channel type", $4);
-		log_state->log_name = strdup($2);
-		log_state->log_handler = log_chan_handler($4);
-	}
-	OBRACE log_channel_options EBRACE SEMICOLON
-	{
-		TAILQ_INSERT_HEAD(&log_head, log_state, log_glue);
-		log_state = NULL;
-	}
-	;
-
-syslog_pri_spec:
-	PRIORITY STRING SEMICOLON
-	{
-		assert(log_state != NULL);
-		if (log_state->log_type != LOG_CHANNEL_SYSLOG)
-			conf_detail(0, "priority may only be used for "
-			    "syslog log channels");
-		log_state->log_data.syslog_pri = log_syslog_encode($2);
-		if (log_state->log_data.syslog_pri < 0)
-			conf_detail(0, "%s: invalid syslog priority", $2);
-	}
-	;
-
-directory_spec:
-	DIRECTORY STRING SEMICOLON
-	{
-		struct stat sb;
-
-		assert(log_state != NULL);
-		if (stat($2, &sb) < 0)
-			conf_detail(0, "%s: %s", $2, strerror(errno));
-		if ((sb.st_mode & S_IFDIR) == 0)
-			conf_detail(0, "%s: not a directory", $2);
-		if ((sb.st_mode & S_IROTH) != 0)
-			bsmtrace_error(0, "%s: world readable", $2);
-		log_state->log_data.bsm_log_dir = strdup($2);
-		if (log_state->log_data.bsm_log_dir == NULL)
-			bsmtrace_error(1, "%s: strdup failed", __func__);
-	}
-	;
-
-log_channel_options: /* Empty */
-	| log_channel_options syslog_pri_spec
-	| log_channel_options directory_spec
 	;
 
 negate_spec: /* Empty */
@@ -289,29 +231,6 @@ priority_spec:
 	}
 	;
 
-log_spec:
-	LOG STRING SEMICOLON
-	{
-		struct bsm_set *sptr;
-
-		if ((sptr = conf_get_bsm_set($2)) == NULL)
-			conf_detail(0, "%s: invalid set", $2);
-		if (sptr->bss_type != SET_TYPE_LOGCHANNEL)
-			conf_detail(0, "%s: supplied set is not of type "
-			    "logchannel", $2);
-		assert(bs_state != NULL);
-		conf_set_log_channel(sptr, bs_state);
-	}
-	| LOG anon_set SEMICOLON
-	{
-		assert(bs_state != NULL);
-		if ($2->bss_type != SET_TYPE_LOGCHANNEL)
-			conf_detail(0, "supplied set is not of type "
-			    "logchannel");
-		conf_set_log_channel($2, bs_state);
-	}
-	;
-
 scope_spec:
 	SCOPE STRING SEMICOLON
 	{
@@ -351,7 +270,6 @@ sequence_options: /* Empty */
 		assert(bs_state != NULL);
 		bs_state->bs_priority = $2;
 	}
-	| sequence_options log_spec
 	| sequence_options scope_spec
 	{
 		assert(bs_state != NULL);
@@ -539,24 +457,10 @@ set_list_ent:
 	}
 	| INTEGER
 	{
-		int val, len;
-		char *str;
+		char buf[64];
 
-		len = 1;
-		val = $1;
-		while (val > 9) {
-			++len;
-			val /= 10;
-		}
-		str = calloc(1, len + 1);
-		if (str == NULL)
-			bsmtrace_error(1, "%s: calloc failed", __func__);
-		str += len;
-		do {
-			*--str = '0' + ($1 % 10);
-			$1 /= 10;
-		} while ($1);
-		conf_array_add(str, &array_state, set_state->bss_type);
+		(void) sprintf(buf, "%d", $1);
+		conf_array_add(strdup(buf), &array_state, set_state->bss_type);
 		$$ = &array_state;
 	}
 	| OPBRACKET STRING EPBRACKET

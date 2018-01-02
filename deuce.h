@@ -134,7 +134,6 @@ struct bsm_sequence {
 	struct bsm_sequence		*bs_par_sequence;
 	u_int				 bs_first_match;
 	int				 bs_priority;
-	TAILQ_HEAD( , logchannel)	 bs_log_channel;
 	int				 bs_seq_scope;
 	pid_t				 bs_seq_scope_data;
 	int				 bs_seq_serial;

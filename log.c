@@ -31,23 +31,38 @@
 #include "includes.h"
 #undef SYSLOG_NAMES
 
-int
-log_bsm_syslog(struct logchannel *lc, struct bsm_sequence *bs,
-    struct bsm_record_data *br);
+void
+log_init_dir(void)
+{
+	char logpath[128];
+	struct stat sb;
 
-static const struct _logchannel_type {
-	char	*lc_str;
-	int	 lc_type;
-	int	(*func)(struct logchannel *, struct bsm_sequence *,
-		    struct bsm_record_data *);
-} logchannel_tab[] = {
-	{ "bsm",	LOG_CHANNEL_BSM, log_bsm_file },
-	{ "syslog",	LOG_CHANNEL_SYSLOG, log_bsm_syslog },
-	{ "stderr",	LOG_CHANNEL_STDERR, log_bsm_stderr },
-	{ NULL,		0, NULL }
-};
+	if (opts.lflag == NULL)
+		return;
+	if (opts.Bflag != 0 && opts.lflag == NULL) {
+		bsmtrace_error(1, "-l directory must be specified for -B\n");
+	}
+	if (stat(opts.lflag, &sb) == -1) {
+		bsmtrace_error(1, "stat: logging directory: %s: %s\n",
+		    opts.lflag, strerror(errno));
+	}
+	if ((sb.st_mode & S_IFDIR) == 0) {
+		bsmtrace_error(1, "%s: is not a directory\n", opts.lflag);
+	}
+	if (access(opts.lflag, W_OK | R_OK | X_OK) != 0) {
+		bsmtrace_error(1, "%s: invalid permissions\n", opts.lflag);
+	}
+	(void) sprintf(logpath, "%s/bsmtrace.log", opts.lflag);
+	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT);
+	if (opts.logfd == -1) {
+		bsmtrace_error(1, "open: %s failed: %s\n", logpath,
+		    strerror(errno));
+	}
+	debug_printf("logging directory and file initialized: %s\n",
+	   logpath);
+}
 
-char *
+static char *
 parse_bsm_generic(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
 	char 	 message[128 + NAME_MAX];
@@ -77,8 +92,7 @@ parse_bsm_generic(struct bsm_sequence *bs, struct bsm_record_data *br)
 }
 
 int
-log_bsm_stderr(struct logchannel *lc, struct bsm_sequence *bs,
-    struct bsm_record_data *br)
+log_bsm_stderr(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
 	char *ptr;
 
@@ -91,22 +105,49 @@ log_bsm_stderr(struct logchannel *lc, struct bsm_sequence *bs,
 }
 
 int
-log_bsm_syslog(struct logchannel *lc, struct bsm_sequence *bs,
-    struct bsm_record_data *br)
+log_bsm_syslog(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
 	char *ptr;
 
 	ptr = parse_bsm_generic(bs, br);
 	if (ptr == NULL)
 		return (-1);
-	syslog(lc->log_data.syslog_pri, "%s", ptr);
+	/*
+	 * NB: re-visit the facility and priority here.
+	 */
+	syslog(LOG_AUTH | LOG_NOTICE, "%s", ptr);
 	free(ptr);
 	return (0);
 }
 
 int
-log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
-    struct bsm_record_data *br)
+log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
+{
+	ssize_t cc;
+	char *ptr;
+	size_t s;
+
+	ptr = parse_bsm_generic(bs, br);
+	if (ptr == NULL)
+		return (-1);
+	s = strlen(ptr);
+	cc = write(opts.logfd, ptr, s);
+	if (cc == -1) {
+		bsmtrace_error(0, "failed to write log data: %s\n",
+		    strerror(errno));
+		free(ptr);
+		return (-1);
+	}
+	if (cc != s) {
+		bsmtrace_error(0, "partial write for log data?\n");
+	}
+	debug_printf("wrote %lld bytes to logfile\n", cc);
+	free(ptr);
+	return (0);
+}
+
+int
+log_bsm_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
 	char path[MAXPATHLEN], dir[MAXPATHLEN];
 	struct stat sb;
@@ -121,11 +162,11 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 		src_basename = (src_basename == NULL) ? opts.aflag : src_basename + 1;
 	}
 	(void) snprintf(dir, MAXPATHLEN,
-	    "%s/%s", lc->log_data.bsm_log_dir, bs->bs_label);
+	    "%s/%s", opts.lflag, bs->bs_label);
 	error = stat(dir, &sb);
 	if (error < 0 && errno == ENOENT) {
 		if (mkdir(dir, S_IRWXU) < 0)
-			bsmtrace_error(1, "mkdir failed");
+			bsmtrace_error(1, "mkdir failed: %s", dir);
 	} else if (error < 0)
 		bsmtrace_error(1, "stat failed");
 	(void) sprintf(path, "%s/%d.%d.%lu",
@@ -157,78 +198,4 @@ log_bsm_file(struct logchannel *lc, struct bsm_sequence *bs,
 			bsmtrace_error(1, "write failed");
 	(void) close(fd);
 	return (0);
-}
-
-/*
- * The decode and pencode functions were ripped from the FreeBSD 6.2 logger(1)
- * code pretty much verbatim.
- */
-static int
-decode(char *name, CODE *codetab)
-{
-	CODE *c;
-
-	if (isdigit(*name))
-		return (atoi(name));
-	for (c = codetab; c->c_name; c++)
-		if (!strcasecmp(name, c->c_name))
-			return (c->c_val);
-	return (-1);
-}
-
-int
-log_syslog_encode(char *s)
-{
-	int fac, lev;
-	char *save;
-
-	for (save = s; *s && *s != '.'; ++s);
-	if (*s) {
-		*s = '\0';
-		fac = decode(save, facilitynames);
-		if (fac < 0)
-			return (-1);
-		*s++ = '.';
-	} else {
-		fac = 0;
-		s = save;
-	}
-	lev = decode(s, prioritynames);
-	if (lev < 0)
-		return (-1);
-	return ((lev & LOG_PRIMASK) | (fac & LOG_FACMASK));
-}
-
-int
-log_chan_type(char *string)
-{
-	const struct _logchannel_type *p;
-
-	for (p = logchannel_tab; p->lc_str != NULL; p++)
-		if (strcmp(string, p->lc_str) == 0)
-			return (p->lc_type);
-	return (-1);
-}
-
-void *
-log_chan_handler(char *string)
-{
-	const struct _logchannel_type *p;
-
-	for (p = logchannel_tab; p->lc_str != NULL; p++)
-		if (strcmp(string, p->lc_str) == 0)
-			return (p->func);
-	return (NULL);
-}
-
-struct logchannel *
-log_lookup_channel(char *string)
-{
-	struct logchannel *lc;
-
-	TAILQ_FOREACH(lc, &log_head, log_glue) {
-		if (strcmp(string, lc->log_name) == 0)
-			return (lc);
-	}
-	return (NULL);
 }
