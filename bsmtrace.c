@@ -194,9 +194,9 @@ main(int argc, char *argv[])
 	if (opts.uflag == NULL) {
 		bsmtrace_error(1, "failed to specify privsep user\n");
 	}
+	bsmtrace_write_pidfile(opts.pflag);
 	log_init_dir();
 	conf_load(opts.fflag);
-	priv_init();
 	if (!opts.Fflag) {
 		ret = fork();
 		if (ret == -1)
@@ -219,9 +219,9 @@ main(int argc, char *argv[])
 		if (setsid() < 0)
 			bsmtrace_error(1, "setsid failed: %s",
 			    strerror(errno));
-		bsmtrace_write_pidfile(opts.pflag);
 		daemonized = 1;
 	}
+	priv_init();
 	bsm_loop(opts.aflag);
 	return (0);
 }
