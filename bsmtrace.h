@@ -39,6 +39,7 @@ struct g_conf {
 	char	*pflag;
 	char	*lflag;
 	int	 logfd;
+	char	*uflag;
 };
 
 struct g_conf opts;

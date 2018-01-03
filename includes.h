@@ -76,3 +76,4 @@
 #include "log.h"
 #include "pipe.h"
 #include "trigger.h"
+#include "privsep.h"

@@ -46,6 +46,9 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 		 */
 		aue = getauevnum(bd->br_event);
 		if (aue == NULL) {
+			/*
+			 * NB: this should not be fatal.
+			 */
 			bsmtrace_error(0, "invalid event type: %d",
 			    bd->br_event);
 			return (0);
@@ -553,7 +556,7 @@ bsm_loop(char *atrail)
 	if (strcmp(opts.aflag, "-") == 0)
 		fp = stdin;
 	else
-		fp = fopen(opts.aflag, "r");
+		fp = priv_auditpipe_open();
 	if (fp == NULL)
 		bsmtrace_error(1, "%s: %s", opts.aflag, strerror(errno));
 	if (strcmp(opts.aflag, DEFAULT_AUDIT_TRAIL) == 0)
