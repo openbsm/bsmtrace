@@ -98,6 +98,13 @@ priv_setuid(void)
 	if (pwd == NULL) {
 		bsmtrace_error(1, "failed to get privsep uid\n");
 	}
+	/*
+	 * Change the permissions associated with the logging directory.
+	 */
+	assert(opts.log_dir_fd != 0);
+	if (fchown(opts.log_dir_fd, pwd->pw_uid, pwd->pw_gid) == -1) {
+		bsmtrace_error(1, "unable to change logging direcotry ownership");
+	}
 	if (initgroups(opts.uflag, pwd->pw_gid) == -1) {
 		bsmtrace_error(1, "initgroups failed: %s\n",
 		    strerror(errno));
@@ -107,6 +114,22 @@ priv_setuid(void)
 	}
 	if (setuid(pwd->pw_uid) == -1) {
 		bsmtrace_error(1, "setuid failed\n");
+	}
+}
+
+static void
+child_handle_signal(int sig)
+{
+	extern int rotate_log;
+
+	switch (sig) {
+	case SIGHUP:
+		rotate_log = 1;
+		debug_printf("caught SIGHUP: will rotate log on next write\n");
+		break;
+	/*
+	 * Other signals?
+	 */
 	}
 }
 
@@ -128,6 +151,7 @@ priv_init(void)
 		exit(1);
 	}
 	if (child_pid == 0) {
+		signal(SIGHUP, child_handle_signal);
 		(void) close(socks[0]);
 #ifdef __FreeBSD__
 		priv_setuid();
@@ -367,3 +391,4 @@ priv_get_logdir_fd(void)
         }
 	return (s);
 }
+

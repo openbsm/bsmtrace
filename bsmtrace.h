@@ -40,6 +40,7 @@ struct g_conf {
 	char	*lflag;
 	int	 logfd;
 	char	*uflag;
+	int	 log_dir_fd;
 };
 
 struct g_conf opts;
