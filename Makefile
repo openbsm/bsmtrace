@@ -7,12 +7,9 @@ OBJ	= pipe.o y.tab.o bsm.o bsmtrace.o conf.o lex.yy.o log.o trigger.o fcache.o
 PREFIX	= /usr/local
 LIBS	= -lbsm
 
-#.ifdef PCRE
-#CFLAGS	+= -I /usr/local/include
-#CFLAGS	+= -L /usr/local/lib
-#CFLAGS	+= -D PCRE
-#LIBS	+= -lpcre
-#.endif
+CFLAGS	+= -I /usr/local/include
+CFLAGS	+= -D PCRE
+LIBS	+= -lpcre
 
 all: $(TARGETS)
 
