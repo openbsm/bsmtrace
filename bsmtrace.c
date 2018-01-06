@@ -44,11 +44,25 @@ bsmtrace_write_pidfile(char *pidfile)
 
 	fd = open(pidfile, O_WRONLY | O_TRUNC | O_CREAT, 0600);
 	if (fd < 0)
-		bsmtrace_error(1, "open pid file failed");
+		bsmtrace_fatal("open pid file failed");
 	(void) sprintf(pidbuf, "%d", getpid());
 	if (write(fd, pidbuf, strlen(pidbuf)) < 0)
-		bsmtrace_error(1, "write pid file faled");
+		bsmtrace_fatal("write pid file faled");
 	(void) close(fd);
+}
+
+
+void
+bsmtrace_fatal(char *fmt, ...)
+{
+	char fmtbuf[1024];
+	va_list ap;
+
+	va_start(ap, fmt);
+	(void) vsnprintf(fmtbuf, sizeof(fmtbuf), fmt, ap);
+	va_end(ap);
+	bsmtrace_warn("fatal: %s", fmtbuf);
+	exit(1);
 }
 
 /*
@@ -57,38 +71,24 @@ bsmtrace_write_pidfile(char *pidfile)
  * return.
  */
 void
-bsmtrace_error(int flag, char *fmt, ...)
+bsmtrace_warn(char *fmt, ...)
 {
 	char fmtbuf[1024];
 	va_list ap;
 	int pri;
 
-	if (flag != 0)
-		pri = LOG_ALERT;
-	else
-		pri = LOG_WARNING;
+	pri = LOG_WARNING;
 	va_start(ap, fmt);
 	(void) vsnprintf(fmtbuf, sizeof(fmtbuf), fmt, ap);
 	va_end(ap);
-	syslog(pri, "%s: %s", flag != 0 ? "fatal" : "warning", fmtbuf);
-	/* if we are not yet a daemon, we also write the error message
- 	 * to stderr. */
+	syslog(pri, "%s", fmtbuf);
+	/*
+	 * If we are not yet a daemon, we also write the error message
+	 * to stderr.
+	 */
 	if (!daemonized)
-		(void) fprintf(stderr, "bsmtrace: %s: %s\n",
-		    flag != 0 ? "fatal" : "warning", fmtbuf);
-	if (flag != 0)
-		bsmtrace_exit(flag);
-}
-
-/*
- * Terminate bsmtrace with return code x, this function should facilitate clean
- * shutdown of the process.
- */
-void
-bsmtrace_exit(int x)
-{
-
-	exit(x);
+		(void) fprintf(stderr, "warning: %s\n", fmtbuf);
+	return;
 }
 
 void
@@ -115,7 +115,7 @@ bsmtrace_handle_sigint(int sig)
 		(void) fputs("\n", stderr);
 		pipe_report_stats(audit_pipe_fd);
 	}
-	bsmtrace_exit(1);
+	exit(1);
 }
 
 void
@@ -136,9 +136,9 @@ bsmtrace_seed(void)
 
 	fd = open("/dev/random", O_RDONLY);
 	if (fd < 0)
-		bsmtrace_error(1, "open random device failed");
+		bsmtrace_fatal("open random device failed");
 	if (read(fd, &seed, sizeof(seed)) != sizeof(seed))
-		bsmtrace_error(1, "read random device failed");
+		bsmtrace_fatal("read random device failed");
 	srandom(seed);
 	(void) close(fd);
 }
@@ -153,7 +153,7 @@ main(int argc, char *argv[])
 	(void) signal(SIGCHLD, SIG_IGN); /* Ignore dying children */
 	(void) signal(SIGINT, bsmtrace_handle_sigint);
 	set_default_settings(&opts);
-	while ((ch = getopt(argc, argv, "Fa:Bbdf:hil:p:v")) != -1) {
+	while ((ch = getopt(argc, argv, "Fa:Bbdf:hil:np:v")) != -1) {
 		switch (ch) {
 		case 'B':
 			opts.Bflag = 1;
@@ -176,6 +176,9 @@ main(int argc, char *argv[])
 		case 'l':
 			opts.lflag = optarg;
 			break;
+		case 'n':
+			opts.nflag = 1;
+			break;
 		case 'p':
 			opts.pflag = optarg;
 			break;
@@ -188,12 +191,14 @@ main(int argc, char *argv[])
 			/* NOTREACHED */
 		}
 	}
-	log_init_dir();
 	conf_load(opts.fflag);
+	if (opts.nflag != 0)
+		return (0);
+	log_init_dir();
 	if (!opts.Fflag) {
 		ret = fork();
 		if (ret == -1)
-			bsmtrace_error(1, "fork failed: %s", strerror(errno));
+			bsmtrace_fatal("fork failed: %s", strerror(errno));
 		if (ret != 0)
 			exit(0);
 		/*
@@ -202,15 +207,14 @@ main(int argc, char *argv[])
 		 */
 		fd = open("/dev/null", O_RDWR);
 		if (fd < 0)
-			bsmtrace_error(1, "open(/dev/null): %s",
-			    strerror(errno));
+			bsmtrace_fatal("open(/dev/null): %s", strerror(errno));
 		(void) dup2(fd, STDIN_FILENO);
 		(void) dup2(fd, STDOUT_FILENO);
 		(void) dup2(fd, STDERR_FILENO);
 		if (fd > 2)
 			(void) close(fd);
 		if (setsid() < 0)
-			bsmtrace_error(1, "setsid failed: %s",
+			bsmtrace_fatal("setsid failed: %s",
 			    strerror(errno));
 		bsmtrace_write_pidfile(opts.pflag);
 		daemonized = 1;
@@ -234,6 +238,7 @@ usage(char *progname)
 	    "  -F                Run program in foreground.\n"
 	    "  -h                Print this help message.\n"
 	    "  -l                Logging directory\n"
+	    "  -n                Parse the configuration and exit\n"
 	    "  -p pid_file       Location of pid file.\n"
 	    "  -v                Print version and exit.\n"
 	    , progname);

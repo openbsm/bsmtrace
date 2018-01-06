@@ -46,7 +46,7 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 		 */
 		aue = getauevnum(bd->br_event);
 		if (aue == NULL) {
-			bsmtrace_error(0, "invalid event type: %d",
+			bsmtrace_warn("invalid event type: %d",
 			    bd->br_event);
 			return (0);
 		}
@@ -168,7 +168,7 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 				match = 1;
 				break;
 			} else if (rc < -1) {
-				bsmtrace_error(0, "pcre exec failed for pattern"
+				bsmtrace_fatal("pcre exec failed for pattern"
 				    " %s on path %s", ap->a_data.pcre[i],
 				    bd->br_path);
 			}
@@ -266,8 +266,8 @@ bsm_get_subj(struct bsm_sequence *bs, struct bsm_record_data *bd)
 		subj = bd->br_egid;
 		break;
 	default:
-		bsmtrace_error(0, "invalid subject type %d", bs->bs_subj_type);
-		assert(0);
+		bsmtrace_fatal("invalid subject type %d", bs->bs_subj_type);
+		break;	/* NOTREACHED */
 	}
 	return (subj);
 }
@@ -335,9 +335,7 @@ bsm_copy_states(struct bsm_sequence *bs_old, struct bsm_sequence *bs_new)
 	TAILQ_FOREACH(bm, &bs_old->bs_mhead, bm_glue) {
 		bm2 = calloc(1, sizeof(*bm2));
 		if (bm2 == NULL) {
-			bsmtrace_error(0, "%s: calloc failed",
-			    __func__);
-			exit(1);
+			bsmtrace_fatal("%s: calloc failed", __func__);
 		}
 		*bm2 = *bm;
 		TAILQ_INSERT_TAIL(&bs_new->bs_mhead, bm2, bm_glue);
@@ -352,7 +350,7 @@ bsm_copy_record_data(struct bsm_record_data *bd)
 	assert(bd != NULL);
 	record = malloc(bd->br_raw_len);
 	if (record == NULL)
-		bsmtrace_error(1, "malloc failed");
+		bsmtrace_fatal("malloc failed");
 	bcopy(bd->br_raw, record, bd->br_raw_len);
 	return (record);
 }
@@ -420,7 +418,7 @@ bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
 	}
 	bs_new = calloc(1, sizeof(*bs_new));
 	if (bs_new == NULL) {
-		bsmtrace_error(0, "%s: calloc failed", __func__);
+		bsmtrace_warn("%s: calloc failed", __func__);
 		return (NULL);
 	}
 	debug_printf("%u:%s: sequence %p cloned and linked\n",
@@ -555,7 +553,7 @@ bsm_loop(char *atrail)
 	else
 		fp = fopen(opts.aflag, "r");
 	if (fp == NULL)
-		bsmtrace_error(1, "%s: %s", opts.aflag, strerror(errno));
+		bsmtrace_fatal("%s: %s", opts.aflag, strerror(errno));
 	if (strcmp(opts.aflag, DEFAULT_AUDIT_TRAIL) == 0)
 		audit_pipe_fd = fileno(fp);
 	debug_printf("opened '%s' for audit monitoring\n", opts.aflag);
@@ -583,7 +581,7 @@ bsm_loop(char *atrail)
 		while (bytesread < reclen) {
 			if (au_fetch_tok(&tok, bsm_rec + bytesread,
 			    reclen - bytesread) < 0) {
-				bsmtrace_error(0, "incomplete record");
+				bsmtrace_warn("incomplete record");
 				break;
 			}
 			switch (tok.id) {

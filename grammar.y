@@ -75,7 +75,7 @@ define_def:
 	{
 		assert(set_state == NULL);
 		if ((set_state = calloc(1, sizeof(*set_state))) == NULL)
-			bsmtrace_error(1, "%s: calloc failed", __func__);
+			bsmtrace_fatal("%s: calloc failed", __func__);
 		if ((set_state->bss_type = conf_set_type($5)) == -1)
 			conf_detail(0, "%s: invalid set type", $5);
 		/* free() this later. */
@@ -110,7 +110,7 @@ anon_set:
 		struct bsm_set *new;
 
 		if ((new = calloc(1, sizeof(*new))) == NULL)
-			bsmtrace_error(1, "%s: calloc failed", __func__);
+			bsmtrace_fatal("%s: calloc failed", __func__);
 		if ((new->bss_type = conf_set_type($2)) == -1)
 			conf_detail(0, "%s: invalid set type", $2);
 		set_state = new;
@@ -203,7 +203,7 @@ sequence_def:
 	{
 		assert(bs_state == NULL);
 		if ((bs_state = calloc(1, sizeof(*bs_state))) == NULL)
-			bsmtrace_error(1, "%s: calloc failed", __func__);
+			bsmtrace_fatal("%s: calloc failed", __func__);
 		/* This will be a parent sequence. */
 		bs_state->bs_seq_flags |= BSM_SEQUENCE_PARENT;
 		bs_state->bs_seq_scope = BSM_SCOPE_GLOBAL;
@@ -218,7 +218,7 @@ sequence_def:
 		if (conf_get_parent_sequence($3) != NULL)
 			conf_detail(0, "%s: sequence exists", $3);
 		if ((bs_state->bs_label = strdup($3)) == NULL)
-			bsmtrace_error(1, "%s: strdup failed", __func__);
+			bsmtrace_fatal("%s: strdup failed", __func__);
 		TAILQ_INSERT_HEAD(&s_parent, bs_state, bs_glue);
 		bs_state = NULL;
 	}
@@ -426,7 +426,7 @@ state:
 	{
 		assert(bm_state == NULL);
 		if ((bm_state = calloc(1, sizeof(*bm_state))) == NULL)
-			bsmtrace_error(1, "%s: calloc failed", __func__);
+			bsmtrace_fatal("%s: calloc failed", __func__);
 	}
 	OBRACE state_options EBRACE SEMICOLON
 	{
