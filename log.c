@@ -40,22 +40,22 @@ log_init_dir(void)
 	if (opts.lflag == NULL)
 		return;
 	if (opts.Bflag != 0 && opts.lflag == NULL) {
-		bsmtrace_error(1, "-l directory must be specified for -B\n");
+		bsmtrace_fatal("-l directory must be specified for -B\n");
 	}
 	if (stat(opts.lflag, &sb) == -1) {
-		bsmtrace_error(1, "stat: logging directory: %s: %s\n",
+		bsmtrace_fatal("stat: logging directory: %s: %s\n",
 		    opts.lflag, strerror(errno));
 	}
 	if ((sb.st_mode & S_IFDIR) == 0) {
-		bsmtrace_error(1, "%s: is not a directory\n", opts.lflag);
+		bsmtrace_fatal("%s: is not a directory\n", opts.lflag);
 	}
 	if (access(opts.lflag, W_OK | R_OK | X_OK) != 0) {
-		bsmtrace_error(1, "%s: invalid permissions\n", opts.lflag);
+		bsmtrace_fatal("%s: invalid permissions\n", opts.lflag);
 	}
 	(void) sprintf(logpath, "%s/bsmtrace.log", opts.lflag);
 	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT);
 	if (opts.logfd == -1) {
-		bsmtrace_error(1, "open: %s failed: %s\n", logpath,
+		bsmtrace_fatal("open: %s failed: %s\n", logpath,
 		    strerror(errno));
 	}
 	debug_printf("logging directory and file initialized: %s\n",
@@ -133,13 +133,13 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	s = strlen(ptr);
 	cc = write(opts.logfd, ptr, s);
 	if (cc == -1) {
-		bsmtrace_error(0, "failed to write log data: %s\n",
+		bsmtrace_fatal("failed to write log data: %s\n",
 		    strerror(errno));
 		free(ptr);
 		return (-1);
 	}
 	if (cc != s) {
-		bsmtrace_error(0, "partial write for log data?\n");
+		bsmtrace_warn("partial write for log data?\n");
 	}
 	debug_printf("wrote %lld bytes to logfile\n", cc);
 	free(ptr);
@@ -166,14 +166,14 @@ log_bsm_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	error = stat(dir, &sb);
 	if (error < 0 && errno == ENOENT) {
 		if (mkdir(dir, S_IRWXU) < 0)
-			bsmtrace_error(1, "mkdir failed: %s", dir);
+			bsmtrace_fatal("mkdir failed: %s", dir);
 	} else if (error < 0)
-		bsmtrace_error(1, "stat failed");
+		bsmtrace_fatal("stat failed");
 	(void) sprintf(path, "%s/%d.%d.%lu",
 	    dir, br->br_sec, br->br_usec, random());
 	fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd < 0)
-		bsmtrace_error(1, "open: %s: %s", path, strerror(errno));
+		bsmtrace_fatal("open: %s: %s", path, strerror(errno));
 	/*
 	 * The logic here becomes a bit complex.  We need to check to see if
 	 * this is a single state sequence, and if it is, log the BSM record
@@ -189,13 +189,13 @@ log_bsm_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	    src_basename);
 	if ((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0) {
 		if (write(fd, br->br_raw, br->br_raw_len) < 0)
-			bsmtrace_error(1, "write failed");
+			bsmtrace_fatal("write failed");
 		(void) close(fd);
 		return (0);
 	}
 	TAILQ_FOREACH(bm, &bs->bs_mhead, bm_glue)
 		if (write(fd, bm->bm_raw, bm->bm_raw_len) < 0)
-			bsmtrace_error(1, "write failed");
+			bsmtrace_fatal("write failed");
 	(void) close(fd);
 	return (0);
 }
