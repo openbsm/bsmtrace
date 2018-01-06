@@ -68,13 +68,25 @@ engine has been included with this source code archive.
 ## Building
 
 Currently, we BSMtrace is built using a basic Makefile. As more platforms are
-supported, this might change.
+supported, this might change. Currently libpcre is required as a build dep.
 
-    make
+On OS X you can install it using home brew
+
+```
+	% brew install pcre
+```
+
+Or on FreeBSD, you can use ports or pkg to install it. Then:
+
+```
+	% make
+```
 
 To install:
 
-    make install
+```
+	% make install
+```
 
 ## Credits
 
