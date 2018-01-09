@@ -1,5 +1,7 @@
 # BSMtrace
 
+[![Build Status](https://travis-ci.org/openbsm/bsmtrace.svg?branch=master)](https://travis-ci.org/openbsm/bsmtrace)
+
 ## Introduction
 
 BSMtrace is a utility that processes audit trails, or real-time audit feeds
