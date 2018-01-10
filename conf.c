@@ -28,6 +28,7 @@
  * SUCH DAMAGE.
  */
 #include "includes.h"
+#include <err.h>
 
 static const struct _settype_tab {
 	char	*stt_str;
@@ -136,6 +137,15 @@ conf_array_add(const char *str, struct array *a, int type)
 	pcre *re;
 #endif
 
+	if (a->a_cnt >= a->a_size) {
+		union array_data *tmp = realloc(a->a_data, (a->a_size + BSM_ARRAY_MAX));
+		if (tmp == NULL) {
+			err(1, "Failed to allocate memory");
+		}
+		a->a_size += BSM_ARRAY_MAX;
+		a->a_data = tmp;
+	}
+
 	value = -1;
 	e = 0;
 	switch (type) {
@@ -201,18 +211,18 @@ conf_array_add(const char *str, struct array *a, int type)
 			conf_detail(0, "%s: invalid %s name\n", str, estring);
 	}
 	if (type == SET_TYPE_PATH || type == SET_TYPE_LOGCHANNEL) {
-		a->a_data.string[a->a_cnt++] = ptr;
+		a->a_data[a->a_cnt++].string = ptr;
 		a->a_type = STRING_ARRAY;
 #ifdef PCRE
 	} else if (type == SET_TYPE_PCRE) {
-		a->a_data.pcre[a->a_cnt++] = re;
+		a->a_data[a->a_cnt++].pcre = re;
 		a->a_type = PCRE_ARRAY;
 #endif
 	} else {
 		if (value == -1) {
 			bsmtrace_fatal("%s: un-initialized 'value'\n");
 		}
-		a->a_data.value[a->a_cnt++] = value;
+		a->a_data[a->a_cnt++].value = value;
 		a->a_type = INTEGER_ARRAY;
 	}
 }
