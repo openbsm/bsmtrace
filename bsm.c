@@ -65,11 +65,11 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 	for (i = 0; i < a->a_cnt; i++) {
 		switch (bm->bm_event_type) {
 		case SET_TYPE_AUCLASS:
-			if ((evdata & a->a_data.value[i]) != 0)
+			if ((evdata & a->a_data[i].value) != 0)
 				match = 1;
 			break;
 		case SET_TYPE_AUEVENT:
-		if (a->a_data.value[i] == evdata)
+		if (a->a_data[i].value == evdata)
 			match = 1;
 		}
 	}
@@ -151,8 +151,8 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	 */
 	if (ap->a_type == STRING_ARRAY) {
 		for (match = 0, i = 0; i < ap->a_cnt; i++) {
-			slen = strlen(ap->a_data.string[i]);
-			if (strncmp(ap->a_data.string[i], bd->br_path, slen)
+			slen = strlen(ap->a_data[i].string);
+			if (strncmp(ap->a_data[i].string, bd->br_path, slen)
 			    == 0) {
 				match = 1;
 				break;
@@ -162,14 +162,14 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	} else if (ap->a_type == PCRE_ARRAY) {
 		slen = strlen(bd->br_path);
 		for (match = 0, i = 0; i < ap->a_cnt; i++) {
-			rc = pcre_exec(ap->a_data.pcre[i], NULL, bd->br_path,
+			rc = pcre_exec(ap->a_data[i].pcre, NULL, bd->br_path,
 			    slen, 0, 0, NULL, 0);
 			if (rc == 0) {
 				match = 1;
 				break;
 			} else if (rc < -1) {
 				bsmtrace_fatal("pcre exec failed for pattern"
-				    " %s on path %s", ap->a_data.pcre[i],
+				    " %s on path %s", ap->a_data[i].pcre,
 				    bd->br_path);
 			}
 		}
@@ -237,7 +237,7 @@ bsm_check_subj_array(u_int subj, struct array *ap)
 	int match, i;
 
 	for (match = 0, i = 0; i < ap->a_cnt; i++)
-		if (ap->a_data.value[i] == subj)
+		if (ap->a_data[i].value == subj)
 			match = 1;
 	if (ap->a_negated != 0)
 		match = !match;

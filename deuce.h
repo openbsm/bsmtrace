@@ -55,6 +55,14 @@ enum {
 	SET_TYPE_LOGCHANNEL
 };
 
+union array_data {
+	int		value;
+	char		*string;
+#ifdef PCRE
+	pcre		*pcre;
+#endif
+};
+
 struct array {
 	int		a_type;	/* Content type of a_data */
 	int		a_negated;
@@ -63,19 +71,9 @@ struct array {
 #ifdef PCRE
 #define PCRE_ARRAY	4
 #endif
-	int		a_cnt;
-	/*
-	 * NB: Perhaps in the future, these arrays will auto
-	 * scale based on the demand.  But for now, just make
-	 * them static.
-	 */
-	union {
-		int	 value[BSM_ARRAY_MAX];
-		char	*string[BSM_ARRAY_MAX];
-#ifdef PCRE
-		pcre	*pcre[BSM_ARRAY_MAX];
-#endif
-	} a_data;
+	size_t		a_cnt;
+	size_t		a_size;
+	union array_data *a_data;
 };
 
 /*

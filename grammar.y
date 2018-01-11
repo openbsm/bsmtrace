@@ -88,6 +88,7 @@ define_def:
 		src = $9;
 		dst = &set_state->bss_data;
 		*dst = *src;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 		TAILQ_INSERT_TAIL(&bsm_set_head, set_state, bss_glue);
 		set_state = NULL;
@@ -123,6 +124,7 @@ anon_set:
 		src = $6;
 		dst = &set_state->bss_data;
 		*dst = *src;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 		$$ = set_state;
 		set_state = NULL;
@@ -308,6 +310,7 @@ type_spec:
 		src = &ptr->bss_data;
 		dst = &bm_state->bm_auditevent;
 		*dst = *src;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 		dst->a_negated = $2;
 	}
@@ -323,6 +326,7 @@ type_spec:
 		src = &$3->bss_data;
 		dst = &bm_state->bm_auditevent;
 		*dst = *src;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 		dst->a_negated = $2;
 	}
@@ -330,6 +334,7 @@ type_spec:
 	{
 		bm_state->bm_event_type = SET_TYPE_AUEVENT;
 		bm_state->bm_event_flags |= BSM_STATE_EVENT_ANY;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 	}
 	;
@@ -353,6 +358,7 @@ object_spec:
 		src = &ptr->bss_data;
 		dst = &bm_state->bm_objects;
 		*dst = *src;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 		dst->a_negated = $2;
 	}
@@ -371,6 +377,7 @@ object_spec:
 #endif
 		dst = &bm_state->bm_objects;
 		*dst = *src;
+		free(array_state.a_data);
 		bzero(&array_state, sizeof(struct array));
 		dst->a_negated = $2;
 	}
