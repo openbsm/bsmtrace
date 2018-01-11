@@ -90,19 +90,16 @@ To install:
 	% make install
 ```
 
-## Credits
+## Contributors
 
-The following organizations and individuals have contributed substantially to
-the development of BSMtrace (in alphabetical order):
+The following organizations and individuals have contributed to the development of BSMtrace (in alphabetical order):
 
 * Aaron L. Meihm
 * Christian S.J. Peron
+* Mak Kolybabi
+* Marius Halden
 * Seccuris Labs
 
-The following people have contributed to the project with the contribution
-noted:
-
-* Mak Kolybabi (EBNF specification, PCRE for pathnames, man pages)
 
 ## Bugs
 
