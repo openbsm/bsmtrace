@@ -9,7 +9,7 @@ LIBS	= -lbsm
 
 CFLAGS	+= -I /usr/local/include
 CFLAGS	+= -D PCRE
-LIBS	+= -lpcre
+LIBS	+= -lpcre -L/usr/local/lib
 
 all: $(TARGETS)
 
