@@ -1,5 +1,4 @@
 language: c
-sudo: false 
 
 env:
   global:
@@ -12,17 +11,11 @@ os:
 
 before_install:
   - |
-    if [ $TRAVIS_OS_NAME == "osx" ]; then
-      brew update
-      brew install openssl
-    fi
+    brew update
+    brew install openssl
   - |
     echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' >/tmp/cert.crt
-    if [ $TRAVIS_OS_NAME == "linux" ]; then
-      cat /tmp/cert.crt >> /etc/ssl/certs/ca-certificates.crt
-    elif [ $TRAVIS_OS_NAME == "osx" ]; then
-      sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/cert.crt
-    fi
+    sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/cert.crt
     rm /tmp/cert.crt
 
 script:
