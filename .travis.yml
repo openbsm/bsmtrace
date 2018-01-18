@@ -1,8 +1,38 @@
 language: c
 sudo: false 
 
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "m6YnXWqdm3G/iUGf0nmWMau32tHIAhJcMUVaR6LdToTxqvqkRWy0v0rYdC8tSeJaoMW8DXyLvcDEPoMChGvw0wXlKAJdMaphl4sxEtO3cukosyQZ58VJq0wads8aFYDD3cHsVOC3x2LxO27olzjJ6rH3J+ICWW1yN1PI3VnpMQ1BP5MfE+oQ5+z3wbEG8LwrngC/KJnXSeoBK57eKWMXEG77m1ofeGQP6O+CQC6A4nVmirmgSHSinlLWe4lsw/ICVA3y4hll10Cri7o0MCnkt/7llS0qgw5wKxFoQ0xFam0Clno97f2Tf+tbqCMlA72Z76SAbra6p2DSh+eiy4XOnsk0vIedkustjP0gQBPtUuTwrZe6SLH68tn1/trGH3rJXvGH+olhPSGob+8AXJzeqMBEuqcfJ3BcbhLt53H8P+nXPUxKZ+XN+94ApM+b06THIfUofn+POMEtUjA7X6lQchTDPvxJv5SG14q/8YOJ4R/W7gTwgi1+822jzWYBqEV1q1DbhlPcGnEun488C1GVqxt1Sb6T/mvo9ZqkZT+2ld3OjpJzE18QeoiHZpO/Bfz0Fj2aerLzaHyIZLAv2I9DZFKrz7XFYjI6SLBqFkWDJjwBkg7rOzuSrojr7IsB//Yzcw7OOknHyeFy9aDYBRNWANllxAdR8+Jrj+k2WxHOloo="
+
 os:
   - osx
 
+before_install:
+  - |
+    if [ $TRAVIS_OS_NAME == "osx" ]; then
+      brew update
+      brew install openssl
+    fi
+  - |
+    echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' >/tmp/cert.crt
+    if [ $TRAVIS_OS_NAME == "linux" ]; then
+      cat /tmp/cert.crt >> /etc/ssl/certs/ca-certificates.crt
+    elif [ $TRAVIS_OS_NAME == "osx" ]; then
+      sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /tmp/cert.crt
+    fi
+    rm /tmp/cert.crt
+
 script:
   - make
+
+addons:
+  coverity_scan:
+    project:
+      name: "openbsm/bsmtrace"
+      description: "Build submitted via Travis CI"
+    notification_email: brueffer@FreeBSD.org
+    build_command: make
+    branch_pattern: coverity_scan
