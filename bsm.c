@@ -601,7 +601,7 @@ bsm_loop(char *atrail)
 				bd.br_usec = tok.tt.hdr64.ms;
 				break;
 			case AUT_HEADER64_EX:
-				bd.br_event = tok.tt.hdr32_ex.e_type;
+				bd.br_event = tok.tt.hdr64_ex.e_type;
 				bd.br_sec = tok.tt.hdr64_ex.s;
 				bd.br_usec = tok.tt.hdr64_ex.ms;
 				break;
