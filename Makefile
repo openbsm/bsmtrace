@@ -29,20 +29,22 @@ lex.yy.o: y.tab.h token.l
 bsmtrace: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIBS)
 
-#doc: bsmtrace.man bsmtrace.conf.man
-#	cp -f bsmtrace.man bsmtrace.1
-#	cp -f bsmtrace.conf.man bsmtrace.conf.5
-#	gzip -f bsmtrace.1 bsmtrace.conf.5
+bsmtrace.1.gz:
+	gzip -k bsmtrace.1
 
-install:
-	strip bsmtrace
-	install -m 0555 -o root -g wheel bsmtrace $(PREFIX)/sbin
+bsmtrace.conf.5.gz:
+	gzip -k bsmtrace.conf.5
+
+install: bsmtrace bsmtrace.1.gz bsmtrace.conf.5.gz
+	install -m 0555 -o root -g wheel bsmtrace $(PREFIX)/bin
 	install -m 0600 -o root -g wheel bsmtrace.conf $(PREFIX)/etc
-#	install -m 0444 -o root -g wheel bsmtrace.1.gz /usr/share/man/man1/
-#	install -m 0444 -o root -g wheel bsmtrace.conf.5.gz /usr/share/man/man5/
+	install -m 0444 -o root -g wheel bsmtrace.1.gz $(PREFIX)/share/man/man1/
+	install -m 0444 -o root -g wheel bsmtrace.conf.5.gz $(PREFIX)/share/man/man5/
 
 deinstall:
-	rm -fr $(PREFIX)/sbin/bsmtrace
+	rm -fr $(PREFIX)/bin/bsmtrace
+	rm -fr $(PREFIX)/share/man/man1/bsmtrace.1.gz
+	rm -fr $(PREFIX)/share/man/man5/bsmtrace.conf.5.gz
 
 clean:
 	rm -f $(TARGETS) *.o *~ \#* *.core ktrace.out lex.yy.c y.tab.* y.output bsmtrace.1.gz bsmtrace.conf.5.gz
