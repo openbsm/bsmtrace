@@ -195,7 +195,7 @@ main(int argc, char *argv[])
 		}
 	}
 	if (opts.uflag == NULL) {
-		bsmtrace_error(1, "failed to specify privsep user\n");
+		bsmtrace_fatal("failed to specify privsep user\n");
 	}
 	bsmtrace_write_pidfile(opts.pflag);
 	log_init_dir();

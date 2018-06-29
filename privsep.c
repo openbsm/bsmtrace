@@ -96,24 +96,24 @@ priv_setuid(void)
 		return;
 	pwd = getpwnam(opts.uflag);
 	if (pwd == NULL) {
-		bsmtrace_error(1, "failed to get privsep uid\n");
+		bsmtrace_fatal("failed to get privsep uid\n");
 	}
 	/*
 	 * Change the permissions associated with the logging directory.
 	 */
 	assert(opts.log_dir_fd != 0);
 	if (fchown(opts.log_dir_fd, pwd->pw_uid, pwd->pw_gid) == -1) {
-		bsmtrace_error(1, "unable to change logging direcotry ownership");
+		bsmtrace_fatal("unable to change logging direcotry ownership");
 	}
 	if (initgroups(opts.uflag, pwd->pw_gid) == -1) {
-		bsmtrace_error(1, "initgroups failed: %s\n",
+		bsmtrace_fatal("initgroups failed: %s\n",
 		    strerror(errno));
 	}
 	if (setgid(pwd->pw_gid) == -1) {
-		bsmtrace_error(1, "setgid failed\n");
+		bsmtrace_fatal("setgid failed\n");
 	}
 	if (setuid(pwd->pw_uid) == -1) {
-		bsmtrace_error(1, "setuid failed\n");
+		bsmtrace_fatal("setuid failed\n");
 	}
 }
 
@@ -170,10 +170,10 @@ priv_init(void)
 #ifdef __APPLE__
 		fprintf(stderr, "poor man's sandbox\n");
 		if (chdir("/var/empty") == -1) {
-			bsmtrace_error(1, "failed to chdir to /var/empty\n");
+			bsmtrace_fatal("failed to chdir to /var/empty\n");
 		}
 		if (chroot(".") == -1) {
-			bsmtrace_error(1, "failed to chroot unprivileged process\n");
+			bsmtrace_fatal("failed to chroot unprivileged process\n");
 		}
 		priv_setuid();
 #endif
@@ -362,7 +362,7 @@ priv_auditpipe_open(void)
 	}
 	fp = fdopen(s, "r");
 	if (fp == NULL) {
-		bsmtrace_error(0, "failed to open audit pipe: %s\n",
+		bsmtrace_fatal("failed to open audit pipe: %s\n",
 		    strerror(errno));
 		exit(1);
 	}
@@ -391,4 +391,3 @@ priv_get_logdir_fd(void)
         }
 	return (s);
 }
-

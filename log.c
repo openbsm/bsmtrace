@@ -57,7 +57,7 @@ log_init_dir(void)
 	}
 	opts.log_dir_fd = open(opts.lflag, O_RDONLY | O_DIRECTORY);
 	if (opts.log_dir_fd == -1) {
-		bsmtrace_error(1, "failed to open logging directory: %s\n",
+		bsmtrace_fatal("failed to open logging directory: %s\n",
 		    strerror(errno));
 	}
 	flags = S_IWUSR | S_IRUSR;
@@ -141,7 +141,7 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 		opts.logfd = openat(opts.log_dir_fd, "bsmtrace.log",
 		    O_APPEND | O_WRONLY | O_CREAT, flags);
 		if (opts.logfd == -1) {
-			bsmtrace_error(1, "failed to rotate log: %s",
+			bsmtrace_fatal("failed to rotate log: %s",
 			    strerror(errno));
 		}
 		rotate_log = 0;
