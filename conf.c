@@ -28,6 +28,7 @@
  * SUCH DAMAGE.
  */
 #include "includes.h"
+#include <err.h>
 
 static const struct _settype_tab {
 	char	*stt_str;
@@ -92,7 +93,7 @@ conf_load(char *path)
 
 	f = fopen(opts.fflag, "r");
 	if (f == NULL)
-		bsmtrace_error(1, "%s: %s", path, strerror(errno));
+		bsmtrace_fatal("%s: %s", path, strerror(errno));
 	conffile = path;
 	yyin = f;
 	TAILQ_INIT(&bsm_set_head);
@@ -114,7 +115,7 @@ conf_detail(int ln, const char *fmt, ...)
 	va_start(ap, fmt);
 	(void) vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	bsmtrace_error(1, "%s:%d: %s", conffile, ln, buf);
+	bsmtrace_fatal("%s:%d: %s", conffile, ln, buf);
 }
 
 /*
@@ -135,6 +136,15 @@ conf_array_add(const char *str, struct array *a, int type)
 	int erroffset;
 	pcre *re;
 #endif
+
+	if (a->a_cnt >= a->a_size) {
+		union array_data *tmp = realloc(a->a_data, (a->a_size + BSM_ARRAY_MAX));
+		if (tmp == NULL) {
+			err(1, "Failed to allocate memory");
+		}
+		a->a_size += BSM_ARRAY_MAX;
+		a->a_data = tmp;
+	}
 
 	value = -1;
 	e = 0;
@@ -184,14 +194,14 @@ conf_array_add(const char *str, struct array *a, int type)
 	case SET_TYPE_PCRE:
 		re = pcre_compile(str, 0, &error, &erroffset, NULL);
 		if (error != 0)
-			bsmtrace_error(1, "%s: pcre_compile failed", __func__);
+			bsmtrace_fatal("%s: pcre_compile failed", __func__);
 		break;
 #endif
 	case SET_TYPE_PATH:
 	case SET_TYPE_LOGCHANNEL:
 		ptr = strdup(str);
 		if (ptr == NULL)
-			bsmtrace_error(1, "%s: strdup failed", __func__);
+			bsmtrace_fatal("%s: strdup failed", __func__);
 		break;
 	}
 	if (e != 0) {
@@ -201,18 +211,18 @@ conf_array_add(const char *str, struct array *a, int type)
 			conf_detail(0, "%s: invalid %s name\n", str, estring);
 	}
 	if (type == SET_TYPE_PATH || type == SET_TYPE_LOGCHANNEL) {
-		a->a_data.string[a->a_cnt++] = ptr;
+		a->a_data[a->a_cnt++].string = ptr;
 		a->a_type = STRING_ARRAY;
 #ifdef PCRE
 	} else if (type == SET_TYPE_PCRE) {
-		a->a_data.pcre[a->a_cnt++] = re;
+		a->a_data[a->a_cnt++].pcre = re;
 		a->a_type = PCRE_ARRAY;
 #endif
 	} else {
 		if (value == -1) {
-			bsmtrace_error(1, "%s: un-initialized 'value'\n");
+			bsmtrace_fatal("%s: un-initialized 'value'\n");
 		}
-		a->a_data.value[a->a_cnt++] = value;
+		a->a_data[a->a_cnt++].value = value;
 		a->a_type = INTEGER_ARRAY;
 	}
 }
@@ -268,7 +278,7 @@ conf_handle_multiplier(struct bsm_sequence *bs, struct bsm_state *bm)
 		bm->bm_multiplier = 1;
 	vec = calloc(bm->bm_multiplier, sizeof(*bm));
 	if (vec == NULL)
-		bsmtrace_error(1, "%s: calloc failed", __func__);
+		bsmtrace_fatal("%s: calloc failed", __func__);
 	for (i = 0; i < bm->bm_multiplier; i++) {
 		dst = &vec[i];
 		assert(dst != NULL);

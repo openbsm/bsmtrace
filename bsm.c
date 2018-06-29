@@ -46,10 +46,7 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 		 */
 		aue = getauevnum(bd->br_event);
 		if (aue == NULL) {
-			/*
-			 * NB: this should not be fatal.
-			 */
-			bsmtrace_error(0, "invalid event type: %d",
+			bsmtrace_warn("invalid event type: %d",
 			    bd->br_event);
 			return (0);
 		}
@@ -68,11 +65,11 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 	for (i = 0; i < a->a_cnt; i++) {
 		switch (bm->bm_event_type) {
 		case SET_TYPE_AUCLASS:
-			if ((evdata & a->a_data.value[i]) != 0)
+			if ((evdata & a->a_data[i].value) != 0)
 				match = 1;
 			break;
 		case SET_TYPE_AUEVENT:
-		if (a->a_data.value[i] == evdata)
+		if (a->a_data[i].value == evdata)
 			match = 1;
 		}
 	}
@@ -154,8 +151,8 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	 */
 	if (ap->a_type == STRING_ARRAY) {
 		for (match = 0, i = 0; i < ap->a_cnt; i++) {
-			slen = strlen(ap->a_data.string[i]);
-			if (strncmp(ap->a_data.string[i], bd->br_path, slen)
+			slen = strlen(ap->a_data[i].string);
+			if (strncmp(ap->a_data[i].string, bd->br_path, slen)
 			    == 0) {
 				match = 1;
 				break;
@@ -165,14 +162,14 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 	} else if (ap->a_type == PCRE_ARRAY) {
 		slen = strlen(bd->br_path);
 		for (match = 0, i = 0; i < ap->a_cnt; i++) {
-			rc = pcre_exec(ap->a_data.pcre[i], NULL, bd->br_path,
+			rc = pcre_exec(ap->a_data[i].pcre, NULL, bd->br_path,
 			    slen, 0, 0, NULL, 0);
 			if (rc == 0) {
 				match = 1;
 				break;
 			} else if (rc < -1) {
-				bsmtrace_error(0, "pcre exec failed for pattern"
-				    " %s on path %s", ap->a_data.pcre[i],
+				bsmtrace_fatal("pcre exec failed for pattern"
+				    " %s on path %s", ap->a_data[i].pcre,
 				    bd->br_path);
 			}
 		}
@@ -240,7 +237,7 @@ bsm_check_subj_array(u_int subj, struct array *ap)
 	int match, i;
 
 	for (match = 0, i = 0; i < ap->a_cnt; i++)
-		if (ap->a_data.value[i] == subj)
+		if (ap->a_data[i].value == subj)
 			match = 1;
 	if (ap->a_negated != 0)
 		match = !match;
@@ -269,8 +266,8 @@ bsm_get_subj(struct bsm_sequence *bs, struct bsm_record_data *bd)
 		subj = bd->br_egid;
 		break;
 	default:
-		bsmtrace_error(0, "invalid subject type %d", bs->bs_subj_type);
-		assert(0);
+		bsmtrace_fatal("invalid subject type %d", bs->bs_subj_type);
+		break;	/* NOTREACHED */
 	}
 	return (subj);
 }
@@ -338,9 +335,7 @@ bsm_copy_states(struct bsm_sequence *bs_old, struct bsm_sequence *bs_new)
 	TAILQ_FOREACH(bm, &bs_old->bs_mhead, bm_glue) {
 		bm2 = calloc(1, sizeof(*bm2));
 		if (bm2 == NULL) {
-			bsmtrace_error(0, "%s: calloc failed",
-			    __func__);
-			exit(1);
+			bsmtrace_fatal("%s: calloc failed", __func__);
 		}
 		*bm2 = *bm;
 		TAILQ_INSERT_TAIL(&bs_new->bs_mhead, bm2, bm_glue);
@@ -355,7 +350,7 @@ bsm_copy_record_data(struct bsm_record_data *bd)
 	assert(bd != NULL);
 	record = malloc(bd->br_raw_len);
 	if (record == NULL)
-		bsmtrace_error(1, "malloc failed");
+		bsmtrace_fatal("malloc failed");
 	bcopy(bd->br_raw, record, bd->br_raw_len);
 	return (record);
 }
@@ -423,7 +418,7 @@ bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
 	}
 	bs_new = calloc(1, sizeof(*bs_new));
 	if (bs_new == NULL) {
-		bsmtrace_error(0, "%s: calloc failed", __func__);
+		bsmtrace_warn("%s: calloc failed", __func__);
 		return (NULL);
 	}
 	debug_printf("%u:%s: sequence %p cloned and linked\n",
@@ -558,7 +553,7 @@ bsm_loop(char *atrail)
 	else
 		fp = priv_auditpipe_open();
 	if (fp == NULL)
-		bsmtrace_error(1, "%s: %s", opts.aflag, strerror(errno));
+		bsmtrace_fatal("%s: %s", opts.aflag, strerror(errno));
 	if (strcmp(opts.aflag, DEFAULT_AUDIT_TRAIL) == 0)
 		audit_pipe_fd = fileno(fp);
 	debug_printf("opened '%s' for audit monitoring\n", opts.aflag);
@@ -586,7 +581,7 @@ bsm_loop(char *atrail)
 		while (bytesread < reclen) {
 			if (au_fetch_tok(&tok, bsm_rec + bytesread,
 			    reclen - bytesread) < 0) {
-				bsmtrace_error(0, "incomplete record");
+				bsmtrace_warn("incomplete record");
 				break;
 			}
 			switch (tok.id) {
@@ -606,7 +601,7 @@ bsm_loop(char *atrail)
 				bd.br_usec = tok.tt.hdr64.ms;
 				break;
 			case AUT_HEADER64_EX:
-				bd.br_event = tok.tt.hdr32_ex.e_type;
+				bd.br_event = tok.tt.hdr64_ex.e_type;
 				bd.br_sec = tok.tt.hdr64_ex.s;
 				bd.br_usec = tok.tt.hdr64_ex.ms;
 				break;

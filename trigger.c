@@ -124,29 +124,30 @@ bsm_run_trigger(struct bsm_record_data *bd, struct bsm_state *bm)
 	cmd = bsm_expand_trigger(bd, bm);
 	if (cmd != NULL) {
 		/*
-		 * XXX should the failure to execute a trigger be a fatal?
+		 * NB: should the failure to execute a trigger be fatal?
 		 */
 		ret = fork();
 		if (ret < 0)
-			bsmtrace_error(1, "%s: fork failed", __func__);
+			bsmtrace_fatal("%s: fork failed", __func__);
 		if (ret == 0) {
 			n = 0;
 			args = calloc(1, sizeof(char *) * TRIGGER_ARGS_MAX);
 			if (args == NULL)
-				bsmtrace_error(1, "%s: calloc failed",
-				    __func__);
+				bsmtrace_fatal("%s: calloc failed", __func__);
 			debug_printf("executing trigger: '%s'\n", cmd);
 			while ((ptr = strsep(&cmd, " ")) != NULL) {
 				if (*ptr == '\0')
 					continue;
 				if ((args[n++] = strdup(ptr)) == NULL)
-					bsmtrace_error(1, "%s: strdup failed",
+					bsmtrace_fatal("%s: strdup failed",
 					    __func__);
 			}
 			(void) execve(args[0], args, NULL);
-			bsmtrace_error(1, "execve: %s", strerror(errno));
+			bsmtrace_fatal("execve: %s", strerror(errno));
 		}
 		free(cmd);
-	} else /* XXX Report expansion failure here */
-		bsmtrace_error(0, "%s: expansion failed", bm->bm_trig);
+	} else /*
+		* NB: we should Report expansion variables which failed.
+		*/
+		bsmtrace_warn("%s: expansion failed", bm->bm_trig);
 }

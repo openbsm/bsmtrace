@@ -52,7 +52,7 @@ pipe_analyze_loss(int pipefd)
 	 */
 	if (aps.ap_drops == ap_cur_drop_cnt)
 		return;
-	bsmtrace_error(0,
+	bsmtrace_warn(
 	    "audit pipe dropped a total of %u records (%u) since last interval",
 	    aps.ap_drops, aps.ap_drops - ap_cur_drop_cnt);
 	ap_cur_drop_cnt = aps.ap_drops;
@@ -63,19 +63,19 @@ pipe_analyze_loss(int pipefd)
 	 * the maximum queue limit, simply return.
 	 */
 	if (ioctl(pipefd, AUDITPIPE_GET_QLIMIT, &cur_qlim) < 0)
-		bsmtrace_error(1, "AUDITPIPE_GET_QLIMIT: %s",
+		bsmtrace_fatal("AUDITPIPE_GET_QLIMIT: %s",
 		    strerror(errno));
 	if (ioctl(pipefd, AUDITPIPE_GET_QLIMIT_MAX, &max_qlim) < 0)
-		bsmtrace_error(1, "AUDITPIPE_GET_QLIMIT_MAX: %s",
+		bsmtrace_fatal("AUDITPIPE_GET_QLIMIT_MAX: %s",
 		    strerror(errno));
 	if (cur_qlim == max_qlim)
 		return;
 	assert(cur_qlim <= max_qlim);
 	cur_qlim *= 2;
 	if (ioctl(pipefd, AUDITPIPE_SET_QLIMIT, &cur_qlim) < 0)
-		bsmtrace_error(1, "AUDITPIPE_SET_QLIMIT: %s",
+		bsmtrace_fatal("AUDITPIPE_SET_QLIMIT: %s",
 		    strerror(errno));
-	bsmtrace_error(0, "resized queue to %u records", cur_qlim);
+	bsmtrace_warn("resized queue to %u records", cur_qlim);
 }
 
 void
@@ -84,10 +84,10 @@ pipe_get_stats(int pipefd, struct pipe_stats *aps)
 
 	assert(aps != NULL);
 	if (ioctl(pipefd, AUDITPIPE_GET_READS, &aps->ap_reads) < 0)
-		bsmtrace_error(1, "AUDITPIPE_GET_READS: %s",
+		bsmtrace_fatal("AUDITPIPE_GET_READS: %s",
 		    strerror(errno));
 	if (ioctl(pipefd, AUDITPIPE_GET_DROPS, &aps->ap_drops) < 0)
-		bsmtrace_error(1, "AUDITPIPE_GET_DROPS: %s",
+		bsmtrace_fatal("AUDITPIPE_GET_DROPS: %s",
 		    strerror(errno));
 }
 
@@ -98,9 +98,8 @@ pipe_report_stats(int pipefd)
 
 	assert(pipefd > 0);
 	pipe_get_stats(pipefd, &aps);
-	/* XXX should be calling bsmtrace_error(0, ...) here? */
 	if (opts.Fflag)
-		(void) fprintf(stderr,
+		bsmtrace_warn(
 		    "audit record drops %" PRIu64 "\n"
 		    "audit record reads %" PRIu64 "\n",
 		    aps.ap_drops, aps.ap_reads);
