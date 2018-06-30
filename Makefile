@@ -4,7 +4,7 @@ CC	?= cc
 CFLAGS 	= -Wall -g -DAUDITPIPE_GET_DROPS
 TARGETS = bsmtrace
 OBJ	= pipe.o y.tab.o bsm.o bsmtrace.o conf.o lex.yy.o log.o trigger.o fcache.o
-PREFIX	= /usr/local
+PREFIX	?= /usr/local
 LIBS	= -lbsm
 
 CFLAGS	+= -I /usr/local/include
@@ -29,28 +29,20 @@ lex.yy.o: y.tab.h token.l
 bsmtrace: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIBS)
 
-bsmtrace.1.gz:
-	gzip -k bsmtrace.1
-
-bsmtrace.conf.5.gz:
-	gzip -k bsmtrace.conf.5
-
-install: bsmtrace bsmtrace.1.gz bsmtrace.conf.5.gz
-	install -m 0555 -o root -g wheel bsmtrace $(PREFIX)/bin
-	install -m 0600 -o root -g wheel bsmtrace.conf $(PREFIX)/etc
-	install -m 0444 -o root -g wheel bsmtrace.1.gz $(PREFIX)/share/man/man1/
-	install -m 0444 -o root -g wheel bsmtrace.conf.5.gz $(PREFIX)/share/man/man5/
-
-brew-install:
+install:
+	[ -d $(PREFIX)/bin ] || mkdir -p $(PREFIX)/bin
 	install -m 0555 bsmtrace $(PREFIX)/bin
+	[ -d $(PREFIX)/etc ] || mkdir -p $(PREFIX)/etc
 	install -m 0600 bsmtrace.conf $(PREFIX)/etc
-	install -m 0444 bsmtrace.1.gz $(PREFIX)/share/man/man1/
-	install -m 0444 bsmtrace.conf.5.gz $(PREFIX)/share/man/man5/
+	[ -d $(PREFIX)/share/man/man1/ ] || mkdir -p (PREFIX)/share/man/man1/
+	install -m 0444 bsmtrace.1 $(PREFIX)/share/man/man1/
+	[ -d $(PREFIX)/share/man/man5/ ] || mkdir -p $(PREFIX)/share/man/man5/
+	install -m 0444 bsmtrace.conf.5 $(PREFIX)/share/man/man5/
 
 deinstall:
 	rm -fr $(PREFIX)/bin/bsmtrace
-	rm -fr $(PREFIX)/share/man/man1/bsmtrace.1.gz
-	rm -fr $(PREFIX)/share/man/man5/bsmtrace.conf.5.gz
+	rm -fr $(PREFIX)/share/man/man1/bsmtrace.1
+	rm -fr $(PREFIX)/share/man/man5/bsmtrace.conf.5
 
 clean:
-	rm -f $(TARGETS) *.o *~ \#* *.core ktrace.out lex.yy.c y.tab.* y.output bsmtrace.1.gz bsmtrace.conf.5.gz
+	rm -f $(TARGETS) *.o *~ \#* *.core ktrace.out lex.yy.c y.tab.* y.output
