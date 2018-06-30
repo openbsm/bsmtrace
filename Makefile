@@ -42,7 +42,7 @@ install: bsmtrace bsmtrace.1.gz bsmtrace.conf.5.gz
 	install -m 0444 -o root -g wheel bsmtrace.conf.5.gz $(PREFIX)/share/man/man5/
 
 brew-install:
-	iinstall -m 0555 bsmtrace $(PREFIX)/bin
+	install -m 0555 bsmtrace $(PREFIX)/bin
 	install -m 0600 bsmtrace.conf $(PREFIX)/etc
 	install -m 0444 bsmtrace.1.gz $(PREFIX)/share/man/man1/
 	install -m 0444 bsmtrace.conf.5.gz $(PREFIX)/share/man/man5/
