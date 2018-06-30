@@ -34,7 +34,7 @@ install:
 	install -m 0555 bsmtrace $(PREFIX)/bin
 	[ -d $(PREFIX)/etc ] || mkdir -p $(PREFIX)/etc
 	install -m 0600 bsmtrace.conf $(PREFIX)/etc
-	[ -d $(PREFIX)/share/man/man1/ ] || mkdir -p (PREFIX)/share/man/man1/
+	[ -d $(PREFIX)/share/man/man1/ ] || mkdir -p $(PREFIX)/share/man/man1/
 	install -m 0444 bsmtrace.1 $(PREFIX)/share/man/man1/
 	[ -d $(PREFIX)/share/man/man5/ ] || mkdir -p $(PREFIX)/share/man/man5/
 	install -m 0444 bsmtrace.conf.5 $(PREFIX)/share/man/man5/
