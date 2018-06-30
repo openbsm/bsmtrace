@@ -20,6 +20,7 @@ before_install:
 
 script:
   - make
+  - make install
 
 addons:
   coverity_scan:
