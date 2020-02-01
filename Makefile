@@ -29,6 +29,9 @@ lex.yy.o: y.tab.h token.l
 bsmtrace: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIBS)
 
+.ORDER:	clean bsmtrace install
+.ORDER:	deinstall install
+
 install:
 	[ -d $(PREFIX)/bin ] || mkdir -p $(PREFIX)/bin
 	install -m 0555 bsmtrace $(PREFIX)/bin
