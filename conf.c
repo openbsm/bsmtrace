@@ -54,7 +54,7 @@ extern char	*yytext;
 extern int	 yyparse(void);
 bsm_set_head_t	 bsm_set_head;
 int		 lineno = 1;
-char		*conffile;
+static const char		*conffile;
 
 /*
  * Return BSM set named str, or NULL if the set was not found in the BSM set
