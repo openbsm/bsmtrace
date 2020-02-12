@@ -101,6 +101,13 @@ conf_load(char *path)
 	(void) fclose(f);
 }
 
+const char *
+conf_get_file(void)
+{
+
+	return (conffile);
+}
+
 /*
  * Configuration file error reporting, non-zero ln overrides lineno.
  */
