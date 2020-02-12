@@ -94,6 +94,7 @@ struct bsm_set {
 	TAILQ_ENTRY(bsm_set)	 bss_glue;
 	char			*bss_name;
 	int			 bss_type;
+	const char		*bss_file;
 };
 typedef	TAILQ_HEAD(, bsm_set)	bsm_set_head_t;
 

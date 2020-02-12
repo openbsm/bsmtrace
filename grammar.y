@@ -84,6 +84,7 @@ define_def:
 			conf_detail(0, "%s: invalid set type", $5);
 		/* free() this later. */
 		set_state->bss_name = $3;
+		set_state->bss_file = yyfile;
 	}
 	OBRACE set_list SEMICOLON EBRACE SEMICOLON
 	{

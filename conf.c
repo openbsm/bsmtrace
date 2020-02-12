@@ -67,7 +67,9 @@ conf_get_bsm_set(char *str)
 	struct bsm_set *ptr;
 
 	TAILQ_FOREACH(ptr, &bsm_set_head, bss_glue) {
-		if (strcmp(str, ptr->bss_name) == 0)
+		if (strcmp(str, ptr->bss_name) == 0 &&
+		    (strcmp(ptr->bss_file, conffile) == 0 ||
+		    strcmp(ptr->bss_file, yyfile) == 0))
 			return (ptr);
 	}
 	return (NULL);
