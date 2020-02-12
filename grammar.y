@@ -31,6 +31,7 @@
 #include "includes.h"
 
 extern int	yylex(void);
+extern int	include(const char *);
 
 static struct bsm_sequence	*bs_state;	/* BSM sequence state */
 static struct bsm_set		*set_state;	/* BSM set state */
@@ -50,7 +51,7 @@ static struct array		 array_state;	/* Volatile array */
 %token	STATUS MULTIPLIER OBRACE EBRACE SEMICOLON COMMA SUBJECT
 %token	STRING ANY SUCCESS FAILURE INTEGER TIMEOUT NOT HOURS MINUTES DAYS
 %token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN
-%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG ZONE
+%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG INCLUDE ZONE
 %type	<num> status_spec SUCCESS FAILURE INTEGER multiplier_spec timeout_spec
 %type	<num> serial_spec negate_spec priority_spec scope_spec timeout_wnd_spec
 %type	<num> timeout_prob_spec time_spec
@@ -68,6 +69,9 @@ root	: /* empty */
 cmd	:
 	define_def
 	| sequence_def
+	| INCLUDE STRING SEMICOLON {
+		include($2);
+	}
 	;
 
 define_def:
