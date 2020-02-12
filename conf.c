@@ -94,7 +94,7 @@ conf_load(char *path)
 	f = fopen(path, "r");
 	if (f == NULL)
 		bsmtrace_fatal("%s: %s", path, strerror(errno));
-	conffile = path;
+	yyfile = conffile = path;
 	yyin = f;
 	TAILQ_INIT(&bsm_set_head);
 	yyparse();
@@ -115,7 +115,7 @@ conf_detail(int ln, const char *fmt, ...)
 	va_start(ap, fmt);
 	(void) vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	bsmtrace_fatal("%s:%d: %s", conffile, ln, buf);
+	bsmtrace_fatal("%s:%d: %s", yyfile, ln, buf);
 }
 
 /*
