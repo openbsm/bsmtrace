@@ -93,7 +93,11 @@ define_def:
 		dst = &set_state->bss_data;
 		*dst = *src;
 		bzero(&array_state, sizeof(struct array));
-		TAILQ_INSERT_TAIL(&bsm_set_head, set_state, bss_glue);
+		/*
+		 * Insert to the head so that the latest set is always found
+		 * first.
+		 */
+		TAILQ_INSERT_HEAD(&bsm_set_head, set_state, bss_glue);
 		set_state = NULL;
 	}
 	;
