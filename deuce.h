@@ -156,6 +156,7 @@ struct bsm_record_data {
 	int		 br_sid;	/* Session ID */
 	dev_t		 br_dev;	/* For fs objects, the device id. */
 	ino_t		 br_inode;	/* For fs objects, the inode. */
+	const char	*br_zonename;	/* Zone name */
 };
 
 #endif	/* DEUCE_H_ */

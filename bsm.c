@@ -646,6 +646,9 @@ bsm_loop(char *atrail)
 			case AUT_PATH:
 				bd.br_path = tok.tt.path.path;
 				break;
+			case AUT_ZONENAME:
+				bd.br_zonename = tok.tt.zonename.zonename;
+				break;
 			}
 			bytesread += tok.len;
 		}
