@@ -31,6 +31,12 @@
 #include "includes.h"
 #undef SYSLOG_NAMES
 
+static struct logfile {
+	struct logfile *next;
+	const char *filename;
+	int fd;
+} *logfiles;
+
 void
 log_init_dir(void)
 {
@@ -68,6 +74,47 @@ log_init_dir(void)
 	}
 	debug_printf("logging directory and file initialized: %s/bsmtrace.log\n",
 	   opts.lflag);
+}
+
+static int
+log_open(const char *filename)
+{
+
+	return (openat(opts.logdirfd, filename, O_APPEND | O_WRONLY | O_CREAT, 0644));
+}
+
+/*
+ * Get an fd corresponding to the given filename.  If we're running in
+ * foreground mode, then we'll just return stderr (for now).
+ */
+int
+log_get_logfile(const char *filename)
+{
+	struct logfile *lf, *plf;
+	int fd;
+
+	if (strlen(filename) > NAME_MAX)
+		return (-1);
+	if (opts.logdirfd < 0 || strcmp(filename, "bsmtrace.log") == 0)
+		return (opts.logfd);
+	plf = lf = logfiles;
+	while (lf != NULL && strcmp(lf->filename, filename) != 0) {
+		plf = lf;
+		lf = lf->next;
+	}
+	if (lf != NULL)
+		return (lf->fd);
+	fd = log_open(filename);
+	if (fd < 0)
+		return (fd);
+	lf = calloc(1, sizeof(*lf));
+	lf->filename = strdup(filename);
+	lf->fd = fd;
+	if (plf != NULL)
+		plf->next = lf;
+	else
+		logfiles = lf;
+	return (fd);
 }
 
 static char *
