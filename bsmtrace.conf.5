@@ -22,7 +22,7 @@
 .\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
-.Dd February 16, 2020
+.Dd February 23, 2020
 .Dt BSMTRACE.CONF 5
 .Os FreeBSD 6.2
 .Sh NAME
@@ -52,6 +52,8 @@ in BNF:
                        "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" |
                        "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
 <digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<logfile_definition> = "logfile" <string> ";"
 
 <set_definition> ::= "define set" <set_name> <set_type> <set> ";"
 <set_name> ::= "$" <alphanumeric_sequence>
@@ -91,7 +93,6 @@ in BNF:
                "subject" ["not"] ( <set> | (<set_name> | "any")) ";"
                ["timeout" <value> <time_scale> ";"]
 	       ["priority" <value> ";"]
-	       ["log" (<set> | <set_name>) ";"]
 	       ["serial" <value> ";"]
 	       ["scope" <scope> ";"]
 	       ["zone" ( NONE | ANY | <string> ) ";"]
