@@ -191,10 +191,14 @@ main(int argc, char *argv[])
 			/* NOTREACHED */
 		}
 	}
+	/*
+	 * Reading configuration isn't a prerequisite for init'ing the logdir, so do
+	 * this now.  The configuration may try to setup files within the logdir.
+	 */
+	log_init_dir();
 	conf_load(opts.fflag);
 	if (opts.nflag != 0)
 		return (0);
-	log_init_dir();
 	if (!opts.Fflag) {
 		ret = fork();
 		if (ret == -1)
