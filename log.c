@@ -34,9 +34,9 @@
 void
 log_init_dir(void)
 {
-	char logpath[128];
 	struct stat sb;
 
+	opts.logdirfd = -1;
 	if (opts.lflag == NULL)
 		return;
 	if (opts.Bflag != 0 && opts.lflag == NULL) {
@@ -52,14 +52,18 @@ log_init_dir(void)
 	if (access(opts.lflag, W_OK | R_OK | X_OK) != 0) {
 		bsmtrace_fatal("%s: invalid permissions\n", opts.lflag);
 	}
-	(void) sprintf(logpath, "%s/bsmtrace.log", opts.lflag);
-	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT, 0644);
+	opts.logdirfd = open(opts.lflag, O_DIRECTORY);
+	if (opts.logdirfd < 0) {
+		bsmtrace_fatal("open: %s failed: %s\n", opts.lflag, strerror(errno));
+	}
+	opts.logfd = openat(opts.logdirfd, "bsmtrace.log",
+	    O_APPEND | O_WRONLY | O_CREAT, 0644);
 	if (opts.logfd == -1) {
-		bsmtrace_fatal("open: %s failed: %s\n", logpath,
+		bsmtrace_fatal("open: %s/bsmtrace.log failed: %s\n", opts.lflag,
 		    strerror(errno));
 	}
-	debug_printf("logging directory and file initialized: %s\n",
-	   logpath);
+	debug_printf("logging directory and file initialized: %s/bsmtrace.log\n",
+	   opts.lflag);
 }
 
 static char *
