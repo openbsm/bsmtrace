@@ -132,6 +132,33 @@ conf_detail(int ln, const char *fmt, ...)
 	bsmtrace_fatal("%s:%d: %s", yyfile, ln, buf);
 }
 
+void
+conf_merge_bsm_set(struct array *desta, struct bsm_set *src)
+{
+	struct array *srca;
+	size_t i, needed;
+
+	srca = &src->bss_data;
+	needed = desta->a_cnt + srca->a_cnt;
+	if (needed >= desta->a_size) {
+		union array_data *tmp;
+		while (needed >= desta->a_size) {
+			desta->a_size += BSM_ARRAY_MAX;
+		}
+
+		tmp = realloc(desta->a_data, desta->a_size);
+		if (tmp == NULL) {
+			err(1, "Failed to allocate memory");
+		}
+		desta->a_data = tmp;
+	}
+
+	for (i = 0; i < srca->a_cnt; i++) {
+		desta->a_data[desta->a_cnt++] = srca->a_data[i];
+	}
+	desta->a_type = srca->a_type;
+}
+
 /*
  * Add value str to array a.  We verify the value str points at is suitable for
  * an insertion into an array of type.

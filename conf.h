@@ -37,6 +37,7 @@ extern int		logfilefd;
 
 struct bsm_set		*conf_get_bsm_set(char *);
 struct bsm_sequence	*conf_get_parent_sequence(char *);
+void			 conf_merge_bsm_set(struct array *desta, struct bsm_set *src);
 void			 conf_load(char *);
 void			 conf_detail(int, const char *, ...) __attribute__ ((noreturn));
 void			 conf_handle_multiplier(struct bsm_sequence *,
