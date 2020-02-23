@@ -53,7 +53,7 @@ log_init_dir(void)
 		bsmtrace_fatal("%s: invalid permissions\n", opts.lflag);
 	}
 	(void) sprintf(logpath, "%s/bsmtrace.log", opts.lflag);
-	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT);
+	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT, 0644);
 	if (opts.logfd == -1) {
 		bsmtrace_fatal("open: %s failed: %s\n", logpath,
 		    strerror(errno));
