@@ -181,12 +181,16 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	ssize_t cc;
 	char *ptr;
 	size_t s;
+	int fd;
 
 	ptr = parse_bsm_generic(bs, br);
 	if (ptr == NULL)
 		return (-1);
 	s = strlen(ptr);
-	cc = write(opts.logfd, ptr, s);
+	fd = opts.logfd;
+	if (bs->bs_logfile >= 0)
+		fd = bs->bs_logfile;
+	cc = write(fd, ptr, s);
 	if (cc == -1) {
 		bsmtrace_fatal("failed to write log data: %s\n",
 		    strerror(errno));
