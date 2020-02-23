@@ -472,7 +472,20 @@ set_list:
 	;
 
 set_list_ent:
-	STRING
+	SET STRING
+	{
+		struct bsm_set *ptr;
+		assert(set_state != NULL && $2 != NULL);
+
+		if ((ptr = conf_get_bsm_set($2)) == NULL)
+			conf_detail(0, "%s: invalid set", $2);
+		if (set_state->bss_type != ptr->bss_type)
+			conf_detail(0, "%s: type mismatch", $2);
+		conf_merge_bsm_set(&array_state, ptr);
+		free($2);
+		$$ = &array_state;
+	}
+	| STRING
 	{
 		assert(set_state != NULL && $1 != NULL);
 		conf_array_add($1, &array_state, set_state->bss_type);
