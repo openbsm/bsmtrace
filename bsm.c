@@ -207,6 +207,37 @@ bsm_log_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
 		(void) write(1, bd->br_raw, bd->br_raw_len);
 }
 
+static inline bool
+bsm_dyn_subj_check(struct bsm_sequence *bs_dyn, struct bsm_record_data *bd,
+    u_int subj)
+{
+
+	/* If the subject doesn't match, we can trivially reject it. */
+	if (bs_dyn->bs_subj.bs_dyn_subj != subj)
+		return (false);
+
+	/*
+	 * If the zonename is NULL, then this is a globally applicable rule.
+	 * This and the above case are the two most likely commonly hit, so
+	 * we've organized these two first.
+	 */
+	if (bs_dyn->bs_zonename == NULL)
+		return (true);
+
+	/*
+	 * Next check for the special case of bs_zonename == NONE, where we can
+	 * proceed only if the record's zonename isn't set.  In all remaining
+	 * cases, we must have a record zonename.
+	 */
+	if (bs_dyn->bs_zonename == ZONENAME_NONE)
+		return (bd->br_zonename == NULL);
+	else if (bd->br_zonename == NULL)
+		return (false);
+
+	/* Finally, match on the zonename. */
+	return (strcmp(bs_dyn->bs_zonename, bd->br_zonename) == 0);
+}
+
 static int
 bsm_state_match(struct bsm_sequence *bs, struct bsm_record_data *bd)
 {
@@ -219,7 +250,7 @@ bsm_state_match(struct bsm_sequence *bs, struct bsm_record_data *bd)
 	 * Do we have a subject match? At this point we EXPLICITLY do not handle
 	 * negation as it should have been handled by the parent.
 	 */
-	match = (bs->bs_subj.bs_dyn_subj == bsm_get_subj(bs, bd));
+	match = bsm_dyn_subj_check(bs, bd, bsm_get_subj(bs, bd));
 	if (match == 0)
 		return (0);
 	/* Match event. */
@@ -273,12 +304,50 @@ bsm_get_subj(struct bsm_sequence *bs, struct bsm_record_data *bd)
 }
 
 static int
+bsm_check_sequence_zone(struct bsm_sequence *bs, struct bsm_record_data *bd)
+{
+
+	if (bs->bs_zonename == NULL)
+		return (1);
+
+	/*
+	 * Match zone as needed.  A NULL bs_zonename means that this sequence is
+	 * globally applicable.  If it's not NULL, it may be one of:
+	 * - NONE   (Host-only sequence)
+	 * - ANY    (Any zone sequence)
+	 * - A glob (Zones matching the glob)
+	 *
+	 * If it's a glob, it will never match the host.  One could also specify a
+	 * a glob like '*' to mean ANY, but the latter provides a decent shortcut
+	 * that doesn't require the overhead of a glob.
+	 */
+	if (bs->bs_zonename == ZONENAME_NONE) {
+		/* Matches host events only. */
+		if (bd->br_zonename != NULL)
+			return (0);
+		return (1);
+	} else if (bd->br_zonename == NULL) {
+		/* Either ANY or a glob; cannot match host events. */
+		return (0);
+	} else if (bs->bs_zonename != ZONENAME_ANY) {
+		return (fnmatch(bs->bs_zonename, bd->br_zonename,
+		    FNM_PATHNAME) == 0 ? 1 : 0);
+	}
+
+	/* bs_zonename == ZONENAME_ANY */
+	return (1);
+}
+
+static int
 bsm_check_parent_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
 {
 	struct bsm_state *bm;
 	u_int subj, match;
 
 	assert((bs->bs_seq_flags & BSM_SEQUENCE_PARENT) != 0);
+	match = bsm_check_sequence_zone(bs, bd);
+	if (match == 0)
+		return (0);
 	subj = bsm_get_subj(bs, bd);
 	match = bsm_check_subj_array(subj, &bs->bs_subj.bs_par_subj);
 	if (match == 0 && (bs->bs_seq_flags & BSM_SEQUENCE_SUBJ_ANY) == 0)
@@ -304,7 +373,7 @@ bsm_dyn_sequence_find(struct bsm_sequence *bs, struct bsm_record_data *bd,
 	TAILQ_FOREACH(bs_dyn, &s_dynamic, bs_glue)
 		if (bs_dyn->bs_par_sequence == bs &&
 		    bs_dyn->bs_subj_type == bs->bs_subj_type &&
-		    bs_dyn->bs_subj.bs_dyn_subj == subj)
+		    bsm_dyn_subj_check(bs_dyn, bd, subj))
 			return (bs_dyn);
 	return (NULL);
 }
@@ -363,6 +432,14 @@ bsm_free_sequence(struct bsm_sequence *bs)
 	assert(bs != NULL);
 	debug_printf("%s: freeing sequence %p\n", __func__, bs);
 	assert((bs->bs_seq_flags & BSM_SEQUENCE_DYNAMIC) != 0);
+	if (bs->bs_zonename != NULL && bs->bs_zonename != ZONENAME_NONE) {
+		/*
+		 * Having matched any zone should have triggered a copy of the
+		 * name.
+		 */
+		assert(bs->bs_zonename != ZONENAME_ANY);
+		free(bs->bs_zonename);
+	}
 	bsm_free_raw_data(bs);
 	while (!TAILQ_EMPTY(&bs->bs_mhead)) {
 		bm = TAILQ_FIRST(&bs->bs_mhead);
@@ -433,6 +510,20 @@ bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
 	bs_new->bs_par_sequence = bs;
 	bs_new->bs_first_match = bd->br_sec;
 	bs_new->bs_mtime = bd->br_sec;
+	/*
+	 * We need to copy the applicable zone to bs_new if it should actually
+	 * be used.  Effectively, we'll either copy the zonename that first
+	 * matched or we'll have copied over ZONENAME_NONE to indicate that
+	 * particular constraint.
+	 */
+	if (bs->bs_zonename != NULL && bs->bs_zonename != ZONENAME_NONE) {
+		/*
+		 * If we matched a glob/any, then this should be trivially true.
+		 */
+		assert(bd->br_zonename != NULL);
+		bs_new->bs_zonename = strdup(bd->br_zonename);
+	}
+
 	bsm_copy_states(bs, bs_new);
 	/*
 	 * If we have made it this far, we can assume that we have more than
@@ -645,6 +736,9 @@ bsm_loop(char *atrail)
 				break;
 			case AUT_PATH:
 				bd.br_path = tok.tt.path.path;
+				break;
+			case AUT_ZONENAME:
+				bd.br_zonename = tok.tt.zonename.zonename;
 				break;
 			}
 			bytesread += tok.len;

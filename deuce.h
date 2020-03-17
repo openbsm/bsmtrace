@@ -137,7 +137,16 @@ struct bsm_sequence {
 	int				 bs_seq_serial;
 	int				 bs_seq_time_wnd;
 	int				 bs_seq_time_wnd_prob;
+	char				*bs_zonename;
 };
+
+/*
+ * Define some special types for zonename: ZONENAME_NONE and ZONENAME_ANY.
+ * These take advantage of non-printable characters to do the dirty work, which
+ * works kind of like mmap(2) in that these will never occur in the input space.
+ */
+#define	ZONENAME_NONE		((char *)1)	/* Host-only. */
+#define	ZONENAME_ANY		((char *)2)	/* Any jail, not the host. */
 
 struct bsm_record_data {
 	u_int64_t	 br_status;	/* Event exit status */
@@ -156,6 +165,7 @@ struct bsm_record_data {
 	int		 br_sid;	/* Session ID */
 	dev_t		 br_dev;	/* For fs objects, the device id. */
 	ino_t		 br_inode;	/* For fs objects, the inode. */
+	const char	*br_zonename;	/* Zone name */
 };
 
 #endif	/* DEUCE_H_ */

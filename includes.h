@@ -40,6 +40,7 @@
 #include <sys/uio.h>
 #include <sys/un.h>
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -47,6 +48,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>

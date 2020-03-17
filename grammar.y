@@ -50,11 +50,11 @@ static struct array		 array_state;	/* Volatile array */
 %token	STATUS MULTIPLIER OBRACE EBRACE SEMICOLON COMMA SUBJECT
 %token	STRING ANY SUCCESS FAILURE INTEGER TIMEOUT NOT HOURS MINUTES DAYS
 %token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN
-%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG
+%token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG ZONE
 %type	<num> status_spec SUCCESS FAILURE INTEGER multiplier_spec timeout_spec
 %type	<num> serial_spec negate_spec priority_spec scope_spec timeout_wnd_spec
 %type	<num> timeout_prob_spec time_spec
-%type	<str> STRING
+%type	<str> STRING zone_spec
 %type	<array> set_list set_list_ent
 %type	<bsm_set> anon_set
 %type	<bsm_state> state
@@ -231,6 +231,21 @@ priority_spec:
 	}
 	;
 
+zone_spec:
+	ZONE NONE SEMICOLON
+	{
+		$$ = ZONENAME_NONE;
+	}
+	| ZONE ANY SEMICOLON
+	{
+		$$ = ZONENAME_ANY;
+	}
+	| ZONE STRING SEMICOLON
+	{
+		$$ = $2;
+	}
+	;
+
 scope_spec:
 	SCOPE STRING SEMICOLON
 	{
@@ -254,6 +269,14 @@ sequence_options: /* Empty */
 	| sequence_options subject_spec
 	{
 		assert(bs_state != NULL);
+	}
+	| sequence_options zone_spec
+	{
+		assert(bs_state != NULL);
+		if ($2 == ZONENAME_NONE || $2 == ZONENAME_ANY)
+			bs_state->bs_zonename = $2;
+		else if ((bs_state->bs_zonename = strdup($2)) == NULL)
+			bsmtrace_fatal("%s: strdup failed", __func__);
 	}
 	| sequence_options timeout_spec
 	{

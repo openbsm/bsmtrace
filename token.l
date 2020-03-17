@@ -71,6 +71,7 @@ timeout-window	return (TIMEOUTWND);
 timeout-prob	return (TIMEOUTPROB);
 trigger		return (TRIGGER);
 weeks		return (WEEKS);
+zone		return (ZONE);
 {integer}	{
 			yylval.num = atoi(yytext);
 			return (INTEGER);

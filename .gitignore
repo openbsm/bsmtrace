@@ -1,0 +1,6 @@
+*.o
+*.yy.c
+bsmtrace
+y.output
+y.tab.c
+y.tab.h
