@@ -91,7 +91,7 @@ conf_load(char *path)
 {
 	FILE *f;
 
-	f = fopen(path, "r");
+	f = fopen(opts.fflag, "r");
 	if (f == NULL)
 		bsmtrace_fatal("%s: %s", path, strerror(errno));
 	conffile = path;

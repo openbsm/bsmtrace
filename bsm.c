@@ -642,7 +642,7 @@ bsm_loop(char *atrail)
 	if (strcmp(opts.aflag, "-") == 0)
 		fp = stdin;
 	else
-		fp = fopen(opts.aflag, "r");
+		fp = priv_auditpipe_open();
 	if (fp == NULL)
 		bsmtrace_fatal("%s: %s", opts.aflag, strerror(errno));
 	if (strcmp(opts.aflag, DEFAULT_AUDIT_TRAIL) == 0)

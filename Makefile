@@ -3,8 +3,9 @@
 CC	?= cc
 CFLAGS 	= -Wall -g -DAUDITPIPE_GET_DROPS
 TARGETS = bsmtrace
-OBJ	= pipe.o y.tab.o bsm.o bsmtrace.o conf.o lex.yy.o log.o trigger.o fcache.o
+OBJ	= pipe.o y.tab.o bsm.o bsmtrace.o conf.o lex.yy.o log.o trigger.o fcache.o privsep_fdpass.o privsep.o
 PREFIX	?= /usr/local
+
 LIBS	= -lbsm
 
 CFLAGS	+= -I /usr/local/include

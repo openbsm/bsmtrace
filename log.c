@@ -31,11 +31,14 @@
 #include "includes.h"
 #undef SYSLOG_NAMES
 
+int rotate_log;
+
 void
 log_init_dir(void)
 {
 	char logpath[128];
 	struct stat sb;
+	mode_t flags;
 
 	if (opts.lflag == NULL)
 		return;
@@ -52,14 +55,18 @@ log_init_dir(void)
 	if (access(opts.lflag, W_OK | R_OK | X_OK) != 0) {
 		bsmtrace_fatal("%s: invalid permissions\n", opts.lflag);
 	}
-	(void) sprintf(logpath, "%s/bsmtrace.log", opts.lflag);
-	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT);
+	opts.log_dir_fd = open(opts.lflag, O_RDONLY | O_DIRECTORY);
+	if (opts.log_dir_fd == -1) {
+		bsmtrace_fatal("failed to open logging directory: %s\n",
+		    strerror(errno));
+	}
+	flags = S_IWUSR | S_IRUSR;
+	opts.logfd = openat(opts.log_dir_fd, "bsmtrace.log", O_APPEND | O_WRONLY | O_CREAT, flags);
 	if (opts.logfd == -1) {
 		bsmtrace_fatal("open: %s failed: %s\n", logpath,
 		    strerror(errno));
 	}
-	debug_printf("logging directory and file initialized: %s\n",
-	   logpath);
+	debug_printf("logging directory and file initialized");
 }
 
 static char *
@@ -126,7 +133,19 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	ssize_t cc;
 	char *ptr;
 	size_t s;
+	mode_t flags;
 
+	if (rotate_log == 1) {
+		close(opts.logfd);
+		flags = S_IWUSR | S_IRUSR;
+		opts.logfd = openat(opts.log_dir_fd, "bsmtrace.log",
+		    O_APPEND | O_WRONLY | O_CREAT, flags);
+		if (opts.logfd == -1) {
+			bsmtrace_fatal("failed to rotate log: %s",
+			    strerror(errno));
+		}
+		rotate_log = 0;
+	}
 	ptr = parse_bsm_generic(bs, br);
 	if (ptr == NULL)
 		return (-1);
@@ -149,9 +168,8 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 int
 log_bsm_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
-	char path[MAXPATHLEN], dir[MAXPATHLEN];
-	struct stat sb;
-	int fd, error;
+	char path[MAXPATHLEN];
+	int fd;
 	struct bsm_state *bm;
 	char *src_basename;
 
@@ -161,19 +179,17 @@ log_bsm_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 		src_basename = strrchr(opts.aflag, '/');
 		src_basename = (src_basename == NULL) ? opts.aflag : src_basename + 1;
 	}
-	(void) snprintf(dir, MAXPATHLEN,
-	    "%s/%s", opts.lflag, bs->bs_label);
-	error = stat(dir, &sb);
-	if (error < 0 && errno == ENOENT) {
-		if (mkdir(dir, S_IRWXU) < 0)
-			bsmtrace_fatal("mkdir failed: %s", dir);
-	} else if (error < 0)
-		bsmtrace_fatal("stat failed");
+	if (mkdirat(opts.log_dir_fd, bs->bs_label, S_IRWXU) < 0) {
+		if (errno != EEXIST) {
+			bsmtrace_fatal("mkdirat failed: %s: %s", bs->bs_label,
+			    strerror(errno));
+		}
+	} 
 	(void) sprintf(path, "%s/%d.%d.%lu",
-	    dir, br->br_sec, br->br_usec, random());
-	fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+	    bs->bs_label, br->br_sec, br->br_usec, random());
+	fd = openat(opts.log_dir_fd, path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd < 0)
-		bsmtrace_fatal("open: %s: %s", path, strerror(errno));
+		bsmtrace_fatal("openat: %s: %s", path, strerror(errno));
 	/*
 	 * The logic here becomes a bit complex.  We need to check to see if
 	 * this is a single state sequence, and if it is, log the BSM record

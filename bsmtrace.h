@@ -39,6 +39,8 @@ struct g_conf {
 	char	*pflag;
 	char	*lflag;
 	int	 logfd;
+	char	*uflag;
+	int	 log_dir_fd;
 	int	 nflag;
 };
 

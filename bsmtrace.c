@@ -153,7 +153,7 @@ main(int argc, char *argv[])
 	(void) signal(SIGCHLD, SIG_IGN); /* Ignore dying children */
 	(void) signal(SIGINT, bsmtrace_handle_sigint);
 	set_default_settings(&opts);
-	while ((ch = getopt(argc, argv, "Fa:Bbdf:hil:np:v")) != -1) {
+	while ((ch = getopt(argc, argv, "Fa:Bbdf:hil:p:u:v")) != -1) {
 		switch (ch) {
 		case 'B':
 			opts.Bflag = 1;
@@ -185,12 +185,20 @@ main(int argc, char *argv[])
 		case 'v':
 			(void) fprintf(stderr, "%s\n", BSMTRACE_VERSION);
 			exit(0);
+		case 'u':
+			opts.uflag = optarg;
+			break;
 		case 'h':
 		default:
 			usage(argv[0]);
 			/* NOTREACHED */
 		}
 	}
+	if (opts.uflag == NULL) {
+		bsmtrace_fatal("failed to specify privsep user\n");
+	}
+	bsmtrace_write_pidfile(opts.pflag);
+	log_init_dir();
 	conf_load(opts.fflag);
 	if (opts.nflag != 0)
 		return (0);
@@ -216,9 +224,9 @@ main(int argc, char *argv[])
 		if (setsid() < 0)
 			bsmtrace_fatal("setsid failed: %s",
 			    strerror(errno));
-		bsmtrace_write_pidfile(opts.pflag);
 		daemonized = 1;
 	}
+	priv_init();
 	bsm_loop(opts.aflag);
 	return (0);
 }
