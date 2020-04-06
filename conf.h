@@ -33,6 +33,7 @@
 extern bsm_set_head_t	bsm_set_head;
 extern int 		lineno;
 extern const char	*yyfile;
+extern int		logfilefd;
 
 struct bsm_set		*conf_get_bsm_set(char *);
 struct bsm_sequence	*conf_get_parent_sequence(char *);

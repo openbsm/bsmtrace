@@ -57,6 +57,9 @@ int		 lineno = 1;
 static const char		*conffile;
 const char	*yyfile;
 
+/* logfilefd will get set and stashed at each load of a config file. */
+int		logfilefd;
+
 /*
  * Return BSM set named str, or NULL if the set was not found in the BSM set
  * queue.
@@ -99,6 +102,7 @@ conf_load(char *path)
 		bsmtrace_fatal("%s: %s", path, strerror(errno));
 	yyfile = conffile = path;
 	yyin = f;
+	logfilefd = opts.logfd;
 	TAILQ_INIT(&bsm_set_head);
 	yyparse();
 	(void) fclose(f);
