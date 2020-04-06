@@ -26,11 +26,24 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <limits.h>
+
 #include "includes.h"
 #include "y.tab.h"
 
 #define YY_NO_UNPUT
 
+/* Modelled after config(8) on FreeBSD. */
+struct incl {
+	struct incl	*incl_prev;
+	YY_BUFFER_STATE	incl_buf;
+	const char	*incl_fname;
+	int		 incl_lineno;
+};
+
+static struct incl	*inclp;
+
+static void endinclude(void);
 %}
 
 %option nounput
@@ -48,6 +61,7 @@ directory	return (DIRECTORY);
 event		return (EVENT);
 failure		return (FAILURE);
 hours		return (HOURS);
+include		return (INCLUDE);
 log		return (LOG);
 log-channel	return (LOGCHAN);
 minutes		return (MINUTES);
@@ -84,6 +98,12 @@ zone		return (ZONE);
 \>		return (EPBRACKET);
 \;		return (SEMICOLON);
 \,		return (COMMA);
+<<EOF>>	{
+			if (inclp == NULL)
+				return (YY_NULL);
+			endinclude();
+			/* carry on */
+		}
 \"		{
 			char buf[1024], *ptr;
 			char c;
@@ -133,3 +153,82 @@ zone		return (ZONE);
 			assert(yylval.str != NULL);
 			return (STRING);
 		}
+%%
+
+int
+include(const char *fname)
+{
+	char filepath[PATH_MAX];
+	char *tslash;
+	FILE *fp;
+	struct incl *incl;
+
+	if (fname[0] == '/') {
+		if (strlcpy(filepath, fname, sizeof(filepath)) >=
+		    sizeof(filepath)) {
+			yyerror("invalid include file path");
+			return (-1);
+		}
+	} else {
+		/*
+		 * Grab it relative to the directory the config file is in.  We
+		 * have already opened the config file, so this part at least
+		 * won't truncate.
+		 */
+		(void) strlcpy(filepath, conf_get_file(), sizeof(filepath));
+		tslash = strrchr(filepath, '/');
+
+		/*
+		 * And we opened it as a file, so a trailing slash won't be the
+		 * last character.  If we didn't find a slash, we'll assume
+		 * relative to the working directory because the config is in
+		 * the working directory.
+		 */
+		if (tslash != NULL) {
+			*(tslash + 1) = '\0';
+		} else {
+			filepath[0] = '\0';
+		}
+
+		if (strlcat(filepath, fname, sizeof(filepath)) >=
+		    sizeof(filepath)) {
+			yyerror("invalid include file path");
+			return (-1);
+		}
+	}
+
+	fp = fopen(filepath, "r");
+	if (fp == NULL) {
+		yyerror("cannot open included file");
+		return (-1);
+	}
+
+	incl = malloc(sizeof(*incl));
+	assert(incl != NULL);
+	incl->incl_prev = inclp;
+	incl->incl_buf = YY_CURRENT_BUFFER;
+	incl->incl_fname = yyfile;
+	incl->incl_lineno = lineno;
+	inclp = incl;
+	yy_switch_to_buffer(yy_create_buffer(fp, YY_BUF_SIZE));
+	yyfile = fname;
+	lineno = 0;
+	return (0);
+}
+
+static void
+endinclude(void)
+{
+	struct incl *incl;
+
+	incl = inclp;
+	assert(incl != NULL);
+
+	inclp = incl->incl_prev;
+	yy_delete_buffer(YY_CURRENT_BUFFER);
+	(void)fclose(yyin);
+	yy_switch_to_buffer(incl->incl_buf);
+	yyfile = incl->incl_fname;
+	lineno = incl->incl_lineno;
+	free(incl);
+}

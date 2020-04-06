@@ -55,6 +55,7 @@ extern int	 yyparse(void);
 bsm_set_head_t	 bsm_set_head;
 int		 lineno = 1;
 static const char		*conffile;
+const char	*yyfile;
 
 /*
  * Return BSM set named str, or NULL if the set was not found in the BSM set
@@ -66,7 +67,9 @@ conf_get_bsm_set(char *str)
 	struct bsm_set *ptr;
 
 	TAILQ_FOREACH(ptr, &bsm_set_head, bss_glue) {
-		if (strcmp(str, ptr->bss_name) == 0)
+		if (strcmp(str, ptr->bss_name) == 0 &&
+		    (strcmp(ptr->bss_file, conffile) == 0 ||
+		    strcmp(ptr->bss_file, yyfile) == 0))
 			return (ptr);
 	}
 	return (NULL);
@@ -94,11 +97,18 @@ conf_load(char *path)
 	f = fopen(path, "r");
 	if (f == NULL)
 		bsmtrace_fatal("%s: %s", path, strerror(errno));
-	conffile = path;
+	yyfile = conffile = path;
 	yyin = f;
 	TAILQ_INIT(&bsm_set_head);
 	yyparse();
 	(void) fclose(f);
+}
+
+const char *
+conf_get_file(void)
+{
+
+	return (conffile);
 }
 
 /*
@@ -115,7 +125,7 @@ conf_detail(int ln, const char *fmt, ...)
 	va_start(ap, fmt);
 	(void) vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	bsmtrace_fatal("%s:%d: %s", conffile, ln, buf);
+	bsmtrace_fatal("%s:%d: %s", yyfile, ln, buf);
 }
 
 /*
@@ -291,7 +301,7 @@ void
 yyerror(const char *str)
 {
 
-	conf_detail(0, "syntax error near '%s'", yytext);
+	conf_detail(0, "syntax error near '%s' (%s)", yytext, str);
 }
 
 int
