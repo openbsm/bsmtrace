@@ -96,6 +96,7 @@ The following organizations and individuals have contributed to the development 
 
 * Aaron L. Meihm
 * Christian S.J. Peron
+* Kyle Evans
 * Mak Kolybabi
 * Marius Halden
 * Seccuris Labs
