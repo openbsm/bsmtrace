@@ -39,6 +39,7 @@ struct incl {
 	YY_BUFFER_STATE	incl_buf;
 	const char	*incl_fname;
 	int		 incl_lineno;
+	int		 incl_logfilefd;
 };
 
 static struct incl	*inclp;
@@ -64,6 +65,7 @@ hours		return (HOURS);
 include		return (INCLUDE);
 log		return (LOG);
 log-channel	return (LOGCHAN);
+logfile		return (LOGFILE);
 minutes		return (MINUTES);
 multiplier	return (MULTIPLIER);
 none		return (NONE);
@@ -209,6 +211,8 @@ include(const char *fname)
 	incl->incl_buf = YY_CURRENT_BUFFER;
 	incl->incl_fname = yyfile;
 	incl->incl_lineno = lineno;
+	incl->incl_logfilefd = logfilefd;
+	logfilefd = opts.logfd;
 	inclp = incl;
 	yy_switch_to_buffer(yy_create_buffer(fp, YY_BUF_SIZE));
 	yyfile = fname;
@@ -230,5 +234,6 @@ endinclude(void)
 	yy_switch_to_buffer(incl->incl_buf);
 	yyfile = incl->incl_fname;
 	lineno = incl->incl_lineno;
+	logfilefd = incl->incl_logfilefd;
 	free(incl);
 }

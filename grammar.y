@@ -50,7 +50,7 @@ static struct array		 array_state;	/* Volatile array */
 %token	DEFINE SET OBJECT SEQUENCE STATE EVENT TRIGGER
 %token	STATUS MULTIPLIER OBRACE EBRACE SEMICOLON COMMA SUBJECT
 %token	STRING ANY SUCCESS FAILURE INTEGER TIMEOUT NOT HOURS MINUTES DAYS
-%token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN
+%token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN LOGFILE
 %token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG INCLUDE ZONE
 %type	<num> status_spec SUCCESS FAILURE INTEGER multiplier_spec timeout_spec
 %type	<num> serial_spec negate_spec priority_spec scope_spec timeout_wnd_spec
@@ -72,6 +72,7 @@ cmd	:
 	| INCLUDE STRING SEMICOLON {
 		include($2);
 	}
+	| logfile_def
 	;
 
 define_def:
@@ -197,6 +198,18 @@ time_spec:
 	| NONE
 	{
 		$$ = 0;
+	}
+	;
+
+logfile_def:
+	LOGFILE STRING SEMICOLON
+	{
+		int fd;
+
+		if ((fd = log_get_logfile($2)) < 0)
+			conf_detail(0, "%s: invalid logfile", $2);
+		logfilefd = fd;
+		free($2);
 	}
 	;
 
