@@ -35,5 +35,6 @@ void 	*log_chan_handler(char *);
 int	 log_bsm_file(struct bsm_sequence *, struct bsm_record_data *);
 void	 log_init_dir(void);
 int	 log_bsm_txt_file(struct bsm_sequence *, struct bsm_record_data *);
+int	 log_get_logfile(const char *filename);
 
 #endif /* LOG_H_ */

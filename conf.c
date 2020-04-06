@@ -57,6 +57,9 @@ int		 lineno = 1;
 static const char		*conffile;
 const char	*yyfile;
 
+/* logfilefd will get set and stashed at each load of a config file. */
+int		logfilefd;
+
 /*
  * Return BSM set named str, or NULL if the set was not found in the BSM set
  * queue.
@@ -99,6 +102,7 @@ conf_load(char *path)
 		bsmtrace_fatal("%s: %s", path, strerror(errno));
 	yyfile = conffile = path;
 	yyin = f;
+	logfilefd = opts.logfd;
 	TAILQ_INIT(&bsm_set_head);
 	yyparse();
 	(void) fclose(f);
@@ -126,6 +130,33 @@ conf_detail(int ln, const char *fmt, ...)
 	(void) vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	bsmtrace_fatal("%s:%d: %s", yyfile, ln, buf);
+}
+
+void
+conf_merge_bsm_set(struct array *desta, struct bsm_set *src)
+{
+	struct array *srca;
+	size_t i, needed;
+
+	srca = &src->bss_data;
+	needed = desta->a_cnt + srca->a_cnt;
+	if (needed >= desta->a_size) {
+		union array_data *tmp;
+		while (needed >= desta->a_size) {
+			desta->a_size += BSM_ARRAY_MAX;
+		}
+
+		tmp = realloc(desta->a_data, desta->a_size);
+		if (tmp == NULL) {
+			err(1, "Failed to allocate memory");
+		}
+		desta->a_data = tmp;
+	}
+
+	for (i = 0; i < srca->a_cnt; i++) {
+		desta->a_data[desta->a_cnt++] = srca->a_data[i];
+	}
+	desta->a_type = srca->a_type;
 }
 
 /*

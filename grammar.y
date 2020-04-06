@@ -50,7 +50,7 @@ static struct array		 array_state;	/* Volatile array */
 %token	DEFINE SET OBJECT SEQUENCE STATE EVENT TRIGGER
 %token	STATUS MULTIPLIER OBRACE EBRACE SEMICOLON COMMA SUBJECT
 %token	STRING ANY SUCCESS FAILURE INTEGER TIMEOUT NOT HOURS MINUTES DAYS
-%token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN
+%token	PRIORITY WEEKS SECONDS NONE QUOTE OPBRACKET EPBRACKET LOGCHAN LOGFILE
 %token	DIRECTORY LOG SCOPE SERIAL TIMEOUTWND TIMEOUTPROB CONFIG INCLUDE ZONE
 %type	<num> status_spec SUCCESS FAILURE INTEGER multiplier_spec timeout_spec
 %type	<num> serial_spec negate_spec priority_spec scope_spec timeout_wnd_spec
@@ -72,6 +72,7 @@ cmd	:
 	| INCLUDE STRING SEMICOLON {
 		include($2);
 	}
+	| logfile_def
 	;
 
 define_def:
@@ -200,6 +201,18 @@ time_spec:
 	}
 	;
 
+logfile_def:
+	LOGFILE STRING SEMICOLON
+	{
+		int fd;
+
+		if ((fd = log_get_logfile($2)) < 0)
+			conf_detail(0, "%s: invalid logfile", $2);
+		logfilefd = fd;
+		free($2);
+	}
+	;
+
 timeout_spec:
 	TIMEOUT time_spec SEMICOLON
 	{
@@ -213,7 +226,11 @@ sequence_def:
 		assert(bs_state == NULL);
 		if ((bs_state = calloc(1, sizeof(*bs_state))) == NULL)
 			bsmtrace_fatal("%s: calloc failed", __func__);
-		/* This will be a parent sequence. */
+		/*
+		 * This will be a parent sequence.  It should use whatever the global
+		 * logfile is set to at definition time.
+		 */
+		bs_state->bs_logfile = logfilefd;
 		bs_state->bs_seq_flags |= BSM_SEQUENCE_PARENT;
 		bs_state->bs_seq_scope = BSM_SCOPE_GLOBAL;
                 bs_state->bs_subj_type = SET_TYPE_NOOP;
@@ -481,7 +498,20 @@ set_list:
 	;
 
 set_list_ent:
-	STRING
+	SET STRING
+	{
+		struct bsm_set *ptr;
+		assert(set_state != NULL && $2 != NULL);
+
+		if ((ptr = conf_get_bsm_set($2)) == NULL)
+			conf_detail(0, "%s: invalid set", $2);
+		if (set_state->bss_type != ptr->bss_type)
+			conf_detail(0, "%s: type mismatch", $2);
+		conf_merge_bsm_set(&array_state, ptr);
+		free($2);
+		$$ = &array_state;
+	}
+	| STRING
 	{
 		assert(set_state != NULL && $1 != NULL);
 		conf_array_add($1, &array_state, set_state->bss_type);

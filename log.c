@@ -31,14 +31,24 @@
 #include "includes.h"
 #undef SYSLOG_NAMES
 
+static struct logfile {
+	struct logfile *next;
+	const char *filename;
+	int fd;
+} *logfiles;
+
 void
 log_init_dir(void)
 {
-	char logpath[128];
 	struct stat sb;
 
-	if (opts.lflag == NULL)
+	opts.logdirfd = -1;
+	opts.logfd = -1;
+	if (opts.lflag == NULL) {
+		/* Default logging fd to stderr if we're not running with -l logdir. */
+		opts.logfd = STDERR_FILENO;
 		return;
+	}
 	if (opts.Bflag != 0 && opts.lflag == NULL) {
 		bsmtrace_fatal("-l directory must be specified for -B\n");
 	}
@@ -52,14 +62,59 @@ log_init_dir(void)
 	if (access(opts.lflag, W_OK | R_OK | X_OK) != 0) {
 		bsmtrace_fatal("%s: invalid permissions\n", opts.lflag);
 	}
-	(void) sprintf(logpath, "%s/bsmtrace.log", opts.lflag);
-	opts.logfd = open(logpath, O_APPEND | O_WRONLY | O_CREAT);
+	opts.logdirfd = open(opts.lflag, O_DIRECTORY);
+	if (opts.logdirfd < 0) {
+		bsmtrace_fatal("open: %s failed: %s\n", opts.lflag, strerror(errno));
+	}
+	opts.logfd = openat(opts.logdirfd, "bsmtrace.log",
+	    O_APPEND | O_WRONLY | O_CREAT, 0644);
 	if (opts.logfd == -1) {
-		bsmtrace_fatal("open: %s failed: %s\n", logpath,
+		bsmtrace_fatal("open: %s/bsmtrace.log failed: %s\n", opts.lflag,
 		    strerror(errno));
 	}
-	debug_printf("logging directory and file initialized: %s\n",
-	   logpath);
+	debug_printf("logging directory and file initialized: %s/bsmtrace.log\n",
+	   opts.lflag);
+}
+
+static int
+log_open(const char *filename)
+{
+
+	return (openat(opts.logdirfd, filename, O_APPEND | O_WRONLY | O_CREAT, 0644));
+}
+
+/*
+ * Get an fd corresponding to the given filename.  If we're running in
+ * foreground mode, then we'll just return stderr (for now).
+ */
+int
+log_get_logfile(const char *filename)
+{
+	struct logfile *lf, *plf;
+	int fd;
+
+	if (strlen(filename) > NAME_MAX)
+		return (-1);
+	if (opts.logdirfd < 0 || strcmp(filename, "bsmtrace.log") == 0)
+		return (opts.logfd);
+	plf = lf = logfiles;
+	while (lf != NULL && strcmp(lf->filename, filename) != 0) {
+		plf = lf;
+		lf = lf->next;
+	}
+	if (lf != NULL)
+		return (lf->fd);
+	fd = log_open(filename);
+	if (fd < 0)
+		return (fd);
+	lf = calloc(1, sizeof(*lf));
+	lf->filename = strdup(filename);
+	lf->fd = fd;
+	if (plf != NULL)
+		plf->next = lf;
+	else
+		logfiles = lf;
+	return (fd);
 }
 
 static char *
@@ -126,12 +181,16 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	ssize_t cc;
 	char *ptr;
 	size_t s;
+	int fd;
 
 	ptr = parse_bsm_generic(bs, br);
 	if (ptr == NULL)
 		return (-1);
 	s = strlen(ptr);
-	cc = write(opts.logfd, ptr, s);
+	fd = opts.logfd;
+	if (bs->bs_logfile >= 0)
+		fd = bs->bs_logfile;
+	cc = write(fd, ptr, s);
 	if (cc == -1) {
 		bsmtrace_fatal("failed to write log data: %s\n",
 		    strerror(errno));
