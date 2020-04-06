@@ -139,6 +139,7 @@ struct bsm_sequence {
 	int				 bs_seq_time_wnd;
 	int				 bs_seq_time_wnd_prob;
 	char				*bs_zonename;
+	int				 bs_logfile;
 };
 
 /*

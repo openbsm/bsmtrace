@@ -226,7 +226,11 @@ sequence_def:
 		assert(bs_state == NULL);
 		if ((bs_state = calloc(1, sizeof(*bs_state))) == NULL)
 			bsmtrace_fatal("%s: calloc failed", __func__);
-		/* This will be a parent sequence. */
+		/*
+		 * This will be a parent sequence.  It should use whatever the global
+		 * logfile is set to at definition time.
+		 */
+		bs_state->bs_logfile = logfilefd;
 		bs_state->bs_seq_flags |= BSM_SEQUENCE_PARENT;
 		bs_state->bs_seq_scope = BSM_SCOPE_GLOBAL;
                 bs_state->bs_subj_type = SET_TYPE_NOOP;
