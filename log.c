@@ -37,8 +37,12 @@ log_init_dir(void)
 	struct stat sb;
 
 	opts.logdirfd = -1;
-	if (opts.lflag == NULL)
+	opts.logfd = -1;
+	if (opts.lflag == NULL) {
+		/* Default logging fd to stderr if we're not running with -l logdir. */
+		opts.logfd = STDERR_FILENO;
 		return;
+	}
 	if (opts.Bflag != 0 && opts.lflag == NULL) {
 		bsmtrace_fatal("-l directory must be specified for -B\n");
 	}
