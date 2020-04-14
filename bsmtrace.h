@@ -28,7 +28,7 @@
 #ifndef BSM_TRACE_H_
 #define	BSM_TRACE_H_
 
-#define BSMTRACE_VERSION "BSMTRACE 2.0-HEAD"
+#define BSMTRACE_VERSION "BSMTRACE 3.0-REL"
 struct g_conf {
 	int	 Bflag;
 	char	*aflag;
