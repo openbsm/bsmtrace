@@ -99,6 +99,7 @@ The following organizations and individuals have contributed to the development 
 * Kyle Evans
 * Mak Kolybabi
 * Marius Halden
+* Modirum MDPay
 * Seccuris Labs
 
 
