@@ -56,6 +56,7 @@ bsm_set_head_t	 bsm_set_head;
 int		 lineno = 1;
 static const char		*conffile;
 const char	*yyfile;
+struct g_conf opts;
 
 /* logfilefd will get set and stashed at each load of a config file. */
 int		logfilefd;
