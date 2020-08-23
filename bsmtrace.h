@@ -43,8 +43,8 @@ struct g_conf {
 	int	 nflag;
 };
 
-struct g_conf opts;
-int	audit_pipe_fd;	/* XXX not happy about this global */
+extern struct g_conf opts;
+extern int	audit_pipe_fd;	/* XXX not happy about this global */
 
 void	bsmtrace_warn(char *, ...);
 void	bsmtrace_fatal(char *, ...) __attribute__ ((noreturn));

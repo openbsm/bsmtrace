@@ -30,6 +30,7 @@
 #include "includes.h"
 
 static int	daemonized;	/* daemonized or not? */
+int	audit_pipe_fd;
 
 /*
  * If we are going to be daemonized, write out a pid file to
