@@ -316,7 +316,7 @@ sequence_options: /* Empty */
 		assert(bs_state != NULL);
 		valid = conf_validate_state($2);
 		if (!valid) {
-			conf_detail(0, "invalid or incomplete state spec");
+			conf_detail(0, "invalid or incomplete state specification");
 		}
 		conf_handle_multiplier(bs_state, $2);
 	}

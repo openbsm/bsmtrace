@@ -312,6 +312,7 @@ conf_set_type(char *str)
 int
 conf_validate_state(struct bsm_state *bm)
 {
+
 	if (bm->bm_status == EVENT_NOOP) {
 		bsmtrace_warn(
 		    "status must be one of: failure, success, any\n");
