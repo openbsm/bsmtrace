@@ -309,6 +309,22 @@ conf_set_type(char *str)
 	return (-1);
 }
 
+int
+conf_validate_state(struct bsm_state *bm)
+{
+
+	if (bm->bm_status == EVENT_NOOP) {
+		bsmtrace_warn(
+		    "status must be one of: failure, success, any\n");
+		return (0);
+	}
+	if (bm->bm_event_type == 0) {
+		bsmtrace_warn("missing audit event specification\n");
+		return (0);
+	}
+	return (1);
+}
+
 void
 conf_handle_multiplier(struct bsm_sequence *bs, struct bsm_state *bm)
 {

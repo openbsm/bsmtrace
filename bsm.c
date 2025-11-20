@@ -32,7 +32,7 @@
 b_head_t s_parent, s_dynamic;
 
 static int
-bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
+bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd, char *name)
 {
 	struct au_event_ent *aue;
 	int i, match, evdata;
@@ -56,7 +56,7 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 		evdata = bd->br_event;
 		break;
 	default:
-		assert(0);
+		bsmtrace_fatal("uknown event type: %d sequence: %s\n", bm->bm_event_type, name);
 	}
 	assert(bm->bm_event_type == SET_TYPE_AUCLASS ||
 	    bm->bm_event_type == SET_TYPE_AUEVENT);
@@ -90,7 +90,7 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd)
 		match = (bd->br_status != 0);
 		break;
 	default:
-		assert(0);
+		bsmtrace_fatal("got bad bm->bm_status=%d on sequence %s\n", bm->bm_status, name);
 	}
 	return (match);
 }
@@ -254,7 +254,7 @@ bsm_state_match(struct bsm_sequence *bs, struct bsm_record_data *bd)
 	if (match == 0)
 		return (0);
 	/* Match event. */
-	match = bsm_match_event(bm, bd);
+	match = bsm_match_event(bm, bd, bs->bs_label);
 	if (match == 0)
 		return (0);
 	/* Match object. */
@@ -355,7 +355,7 @@ bsm_check_parent_sequence(struct bsm_sequence *bs, struct bsm_record_data *bd)
 	assert(bs->bs_cur_state == NULL && !TAILQ_EMPTY(&bs->bs_mhead));
 	bm = TAILQ_FIRST(&bs->bs_mhead);
 	/* Match event. */
-	match = bsm_match_event(bm, bd);
+	match = bsm_match_event(bm, bd, bs->bs_label);
 	if (match == 0)
 		return (0);
 	/* Match object. */
