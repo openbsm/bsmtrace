@@ -21,8 +21,8 @@
 <set_definition> ::= "define set" <set_name> <set_type> <set> ";"
 <set_name> ::= "$" <alphanumeric_sequence>
 <set_type> ::= "<" ("auid" | "euid" | "ruid" | "egid" | "rgid" | "auditevent" |
-               "auditclass" | "path" | "logchannel") ">"
-<set> ::= "{" (<subject_set> | <event_set> | <object_set> | <log_set>) ";}"
+               "auditclass" | "path" ) ">"
+<set> ::= "{" (<subject_set> | <event_set> | <object_set> ";}"
 
 <subject_set> ::= <auid_set> | <euid_set> | <ruid_set> | <egid_set> | <rgid_set>
 <auid_set> ::= <auid> { "," <auid> }
@@ -45,20 +45,12 @@
 <object_set> ::= <path_set>
 <path_set> ::= <path> { "," <path> }
 
-<log_set> ::= "{" <log_channel_name> { "," <log_channel_name>} ";}"
-<log_channel> ::= "log-channel" <log_channel_name> <log_type> <log_option_set> ";"
-<log_type> ::= "bsm" | "syslog" | "stderr"
-<log_option_set> ::= "{" <log_option> { "," <log_option> } ";}"
-<log_option> ::= ( "priority" | "directory" ) <string>
-<log_channel_name> ::= "$" <alphanumeric_sequence>
-
 <sequence> ::= "sequence" <sequence_name> "{"
                "subject" ["not"] ( <set> | (<set_name> | "any")) ";"
                ["timeout" <value> <time_scale> ";"]
                ["timeout-window" <value> <time_scale> ";"]
                ["timeout-probability" <value> ";"]
 	       ["priority" <value> ";"]
-	       ["log" (<set> | <set_name>) ";"]
 	       ["serial" <value> ";"]
 	       ["scope" <scope> ";"]
                <state> { <state> } "};"
