@@ -52,4 +52,6 @@ int			 yywrap(void);
 void			 conf_set_log_channel(struct bsm_set *,
 			     struct bsm_sequence *);
 int			 conf_return_scope(char *);
+int			 conf_validate_state(struct bsm_state *);
+
 #endif	/* BSM_CONF_H_ */
