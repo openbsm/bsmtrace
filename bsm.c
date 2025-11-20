@@ -35,8 +35,9 @@ static int
 bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd, char *name)
 {
 	struct au_event_ent *aue;
-	int i, match, evdata;
+	int match, evdata;
 	struct array *a;
+	size_t i;
 
 	switch (bm->bm_event_type) {
 	case SET_TYPE_AUCLASS:
@@ -98,8 +99,9 @@ bsm_match_event(struct bsm_state *bm, struct bsm_record_data *bd, char *name)
 static int
 bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 {
-	int i, slen, match;
 	struct array *ap;
+	int slen, match;
+	size_t i;
 #ifdef PCRE
 	int rc;
 #endif
@@ -169,7 +171,8 @@ bsm_match_object(struct bsm_state *bm, struct bsm_record_data *bd)
 				break;
 			} else if (rc < -1) {
 				bsmtrace_fatal("pcre exec failed for pattern"
-				    " %s on path %s", ap->a_data[i].pcre,
+				    " %s on path %s",
+				    (char *)ap->a_data[i].pcre,
 				    bd->br_path);
 			}
 		}
@@ -265,14 +268,17 @@ bsm_state_match(struct bsm_sequence *bs, struct bsm_record_data *bd)
 static int
 bsm_check_subj_array(u_int subj, struct array *ap)
 {
-	int match, i;
+	size_t i, match;
+	int ret;
 
-	for (match = 0, i = 0; i < ap->a_cnt; i++)
-		if (ap->a_data[i].value == subj)
+	for (match = 0, i = 0; i < ap->a_cnt; i++) {
+		if ((u_int)ap->a_data[i].value == subj)
 			match = 1;
+	}
 	if (ap->a_negated != 0)
 		match = !match;
-	return (match);
+	ret = match;
+	return (ret);
 }
 
 int
@@ -280,6 +286,7 @@ bsm_get_subj(struct bsm_sequence *bs, struct bsm_record_data *bd)
 {
 	u_int subj;
 
+	subj = 0;
 	switch (bs->bs_subj_type) {
 	case SET_TYPE_AUID:
 		subj = bd->br_auid;
@@ -399,7 +406,7 @@ bsm_copy_states(struct bsm_sequence *bs_old, struct bsm_sequence *bs_new)
 	 * Make sure that we initialize the new tailq head to NULL
 	 * otherwise we would be recursively adding states.
 	 */
-	debug_printf("%s: copying states from sequence %p\n", __func__, bs_old);
+	debug_printf("%s: copying states from sequence %p\n", __func__, (void *)bs_old);
 	TAILQ_INIT(&bs_new->bs_mhead);
 	TAILQ_FOREACH(bm, &bs_old->bs_mhead, bm_glue) {
 		bm2 = calloc(1, sizeof(*bm2));
@@ -430,7 +437,7 @@ bsm_free_sequence(struct bsm_sequence *bs)
 	struct bsm_state *bm;
 
 	assert(bs != NULL);
-	debug_printf("%s: freeing sequence %p\n", __func__, bs);
+	debug_printf("%s: freeing sequence %p\n", __func__, (void *)bs);
 	assert((bs->bs_seq_flags & BSM_SEQUENCE_DYNAMIC) != 0);
 	if (bs->bs_zonename != NULL && bs->bs_zonename != ZONENAME_NONE) {
 		/*
@@ -498,8 +505,8 @@ bsm_sequence_clone(struct bsm_sequence *bs, u_int subj,
 		bsmtrace_warn("%s: calloc failed", __func__);
 		return (NULL);
 	}
-	debug_printf("%u:%s: sequence %p cloned and linked\n",
-	    time(NULL), bs->bs_label, bs_new);
+	debug_printf("%ld:%s: sequence %p cloned and linked\n",
+	    time(NULL), bs->bs_label, (void *)bs_new);
 	*bs_new = *bs;
 	/*
 	 * The BSM sequence flags are mutually exclusive.
@@ -599,7 +606,7 @@ bsm_sequence_scan(struct bsm_record_data *bd)
 			continue;
 		}
 		debug_printf("%s: state transition cur=%p\n", bs->bs_label,
-		    TAILQ_NEXT(bm, bm_glue));
+		    (void *)TAILQ_NEXT(bm, bm_glue));
 		bs->bs_cur_state = TAILQ_NEXT(bm, bm_glue);
 	}
 	/* Match parent sequences. */
@@ -621,7 +628,7 @@ bsm_sequence_scan(struct bsm_record_data *bd)
 			bsm_log_sequence(bs, bd);
 			continue;
 		}
-		debug_printf("%d:%s: state transition\n", time(NULL), bs->bs_label);
+		debug_printf("%ld:%s: state transition\n", time(NULL), bs->bs_label);
 		subj = bsm_get_subj(bs, bd);
 		bs_dyn = bsm_sequence_clone(bs, subj, bd);
 		if (bs_dyn == NULL)
@@ -631,7 +638,7 @@ bsm_sequence_scan(struct bsm_record_data *bd)
 }
 
 void
-bsm_loop(char *atrail)
+bsm_loop(char *atrail __attribute__ ((unused)))
 {
 	struct bsm_record_data bd;
 	int reclen, bytesread, recsread;

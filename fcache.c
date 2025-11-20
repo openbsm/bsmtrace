@@ -31,8 +31,9 @@
 
 static int      fcache_cmp(struct fcache *, struct fcache *);
 
-RB_PROTOTYPE(btree, fcache, f_glue, fcache_cmp);
-RB_GENERATE(btree, fcache, f_glue, fcache_cmp);
+RB_PROTOTYPE(btree, fcache, f_glue, fcache_cmp)
+RB_GENERATE(btree, fcache, f_glue, fcache_cmp)
+
 TAILQ_HEAD(tailhead, dev_list) cache_head = TAILQ_HEAD_INITIALIZER(cache_head);
 
 static int

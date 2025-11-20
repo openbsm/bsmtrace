@@ -241,8 +241,6 @@ sequence_def:
                 /* Check for valid subject specified in sequence options. */
                 if (bs_state->bs_subj_type == SET_TYPE_NOOP)
                         conf_detail(0, "%s: must specify a subject", $3);
-		if (conf_get_parent_sequence($3) != NULL)
-			conf_detail(0, "%s: sequence exists", $3);
 		if ((bs_state->bs_label = strdup($3)) == NULL)
 			bsmtrace_fatal("%s: strdup failed", __func__);
 		TAILQ_INSERT_HEAD(&s_parent, bs_state, bs_glue);

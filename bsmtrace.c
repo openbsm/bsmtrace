@@ -109,7 +109,7 @@ debug_printf(char *fmt, ...)
 }
 
 void
-bsmtrace_handle_sigint(int sig)
+bsmtrace_handle_sigint(int sig __attribute__((unused)))
 {
 
 	if (audit_pipe_fd != 0) {

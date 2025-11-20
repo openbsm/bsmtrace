@@ -52,6 +52,8 @@ static const struct _settype_tab {
 extern FILE	*yyin;
 extern char	*yytext;
 extern int	 yyparse(void);
+int		 yywrap(void);
+extern void	 yylex_destroy(void);
 bsm_set_head_t	 bsm_set_head;
 int		 lineno = 1;
 static const char		*conffile;
@@ -80,17 +82,6 @@ conf_get_bsm_set(char *str)
 }
 
 /*
- * Return sequence with name str from parent queue, or NULL if sequence is not
- * found.
- */
-struct bsm_sequence *
-conf_get_parent_sequence(char *str)
-{
-
-	return (NULL);
-}
-
-/*
  * Load configuration file from path.
  */
 void
@@ -106,6 +97,7 @@ conf_load(char *path)
 	logfilefd = opts.logfd;
 	TAILQ_INIT(&bsm_set_head);
 	yyparse();
+	yylex_destroy();
 	(void) fclose(f);
 }
 
@@ -262,7 +254,7 @@ conf_array_add(const char *str, struct array *a, int type)
 #endif
 	} else {
 		if (value == -1) {
-			bsmtrace_fatal("%s: un-initialized 'value'\n");
+			bsmtrace_fatal("un-initialized 'value'\n");
 		}
 		a->a_data[a->a_cnt++].value = value;
 		a->a_type = INTEGER_ARRAY;
@@ -353,7 +345,7 @@ yyerror(const char *str)
 }
 
 int
-yywrap()
+yywrap(void)
 {
 
 	return (1);

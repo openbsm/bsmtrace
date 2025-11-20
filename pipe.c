@@ -36,13 +36,13 @@
 
 #ifdef AUDITPIPE_GET_DROPS
 
-static int	ap_cur_drop_cnt;
+static u_int64_t	ap_cur_drop_cnt;
 
 void
 pipe_analyze_loss(int pipefd)
 {
-	struct pipe_stats aps;
 	unsigned int cur_qlim, max_qlim;
+	struct pipe_stats aps;
 
 	pipe_get_stats(pipefd, &aps);
 	/*
@@ -53,7 +53,7 @@ pipe_analyze_loss(int pipefd)
 	if (aps.ap_drops == ap_cur_drop_cnt)
 		return;
 	bsmtrace_warn(
-	    "audit pipe dropped a total of %u records (%u) since last interval",
+	    "audit pipe dropped a total of %ld records (%ld) since last interval",
 	    aps.ap_drops, aps.ap_drops - ap_cur_drop_cnt);
 	ap_cur_drop_cnt = aps.ap_drops;
 	/*

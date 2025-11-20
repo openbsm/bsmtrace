@@ -180,7 +180,7 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 {
 	ssize_t cc;
 	char *ptr;
-	size_t s;
+	ssize_t s;
 	int fd;
 
 	ptr = parse_bsm_generic(bs, br);
@@ -200,7 +200,7 @@ log_bsm_txt_file(struct bsm_sequence *bs, struct bsm_record_data *br)
 	if (cc != s) {
 		bsmtrace_warn("partial write for log data?\n");
 	}
-	debug_printf("wrote %lld bytes to logfile\n", cc);
+	debug_printf("wrote %zd bytes to logfile\n", cc);
 	free(ptr);
 	return (0);
 }
