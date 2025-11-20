@@ -46,8 +46,8 @@ struct g_conf {
 extern struct g_conf opts;
 extern int	audit_pipe_fd;	/* XXX not happy about this global */
 
-void	bsmtrace_warn(char *, ...);
-void	bsmtrace_fatal(char *, ...) __attribute__ ((noreturn));
-void	debug_printf(char *, ...);
+void	bsmtrace_warn(char *, ...) __attribute__((format(printf, 1, 2)));
+void	bsmtrace_fatal(char *, ...) __attribute__((format(printf, 1, 2)));
+void	debug_printf(char *, ...)__attribute__((format(printf, 1, 2)));
 void	usage(char *);
 #endif	/* BSM_TRACE_H_ */

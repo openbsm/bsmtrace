@@ -1,7 +1,8 @@
 # $Id$
 
 CC	?= cc
-CFLAGS 	= -Wall -g -DAUDITPIPE_GET_DROPS
+CFLAGS 	= -Wall -g -DAUDITPIPE_GET_DROPS  -Wall -Wextra -Wpedantic -Wshadow -Wformat=2 -fno-omit-frame-pointer -fstack-protector
+CFLAGS += -fsanitize=address
 TARGETS = bsmtrace
 OBJ	= pipe.o y.tab.o bsm.o bsmtrace.o conf.o lex.yy.o log.o trigger.o fcache.o
 PREFIX	?= /usr/local
